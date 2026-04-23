@@ -6,35 +6,32 @@
 <title>RakuThrough — ラクスルー Ver.8.0</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@900&family=Zen+Maru+Gothic:wght@400;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-/* 以前の index 12.html のスタイルを完全継承 */
 :root {
   --bg: #f5f4f0; --surface: #ffffff; --surface2: #f0efe9;
   --ink: #1a1a18; --ink2: #6b6a64; --ink3: #a8a79f;
-  --accent: #1a56db; /* ★個人ボタンをロイヤルブルーに変更 */
-  --accent-light: #e8f0fb;
+  --accent: #1a56db; /* 個人：ロイヤルブルー */
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-body { margin: 0; background: var(--bg); font-family: 'Zen Maru Gothic', sans-serif; overflow-x: hidden; }
+body { margin: 0; background: var(--bg); font-family: 'Zen Maru Gothic', sans-serif; color: var(--ink); }
 
-/* ヘッダー・ナビの表示バグ修正（重なり順を一番上に） */
-.header { position: sticky; top: 0; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); z-index: 2000; padding: 15px 20px; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-.nav-bar { position: fixed; bottom: 0; width: 100%; background: var(--surface); z-index: 2000; display: flex; justify-content: space-around; padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(0,0,0,0.05); }
-
+/* レイアウト */
+.header { position: sticky; top: 0; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 2000; border-bottom: 1px solid rgba(0,0,0,0.05); }
+.nav-bar { position: fixed; bottom: 0; width: 100%; background: var(--surface); display: flex; justify-content: space-around; padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(0,0,0,0.05); z-index: 3000; }
 .view { display: none; padding: 20px; padding-bottom: 120px; min-height: 100vh; }
 .view.active { display: block; }
 
-/* 個人(青)・事業(黒) スイッチ */
+/* ボタン類 */
 .wallet-toggle { display: flex; background: var(--surface2); padding: 4px; border-radius: 12px; margin-bottom: 20px; }
 .wallet-btn { flex: 1; padding: 12px; border-radius: 10px; border: none; background: transparent; font-weight: 700; color: var(--ink2); cursor: pointer; }
-.wallet-btn[data-wallet="personal"].active { background: var(--accent); color: white; box-shadow: 0 4px 12px rgba(26, 86, 219, 0.3); }
+.wallet-btn[data-wallet="personal"].active { background: var(--accent); color: white; box-shadow: 0 4px 10px rgba(26,86,219,0.3); }
 .wallet-btn[data-wallet="business"].active { background: #1e1e1e; color: white; }
 
-.category-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
-.cat-btn { padding: 15px 5px; border-radius: 15px; border: 2px solid transparent; background: var(--surface); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 5px; font-weight: 700; cursor: pointer; }
-.cat-btn.active { border-color: currentColor; }
+.category-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.cat-btn { padding: 15px 5px; border-radius: 15px; border: 2px solid transparent; background: var(--surface); text-align: center; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; }
+.cat-btn.active { border-color: currentColor; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
 
-.fab { position: fixed; right: 20px; bottom: calc(85px + env(safe-area-inset-bottom)); width: 60px; height: 60px; background: var(--accent); color: white; border-radius: 30px; display: flex; justify-content: center; align-items: center; font-size: 30px; box-shadow: 0 8px 20px rgba(26, 86, 219, 0.4); z-index: 2100; border: none; }
+.fab { position: fixed; right: 20px; bottom: calc(85px + env(safe-area-inset-bottom)); width: 60px; height: 60px; background: var(--accent); color: white; border-radius: 30px; display: flex; justify-content: center; align-items: center; font-size: 30px; box-shadow: 0 8px 20px rgba(26,86,219,0.4); z-index: 2500; border: none; }
 </style>
 </head>
 <body>
@@ -47,10 +44,10 @@ body { margin: 0; background: var(--bg); font-family: 'Zen Maru Gothic', sans-se
 <main>
   <section id="main-view" class="view active">
     <div style="margin-bottom:30px">
-      <div style="font-size:14px; color:var(--ink2)">今月の経費（暫定）</div>
+      <div style="font-size:14px; color:var(--ink2)">今月の経費</div>
       <div id="total-expense" style="font-family:'DM Mono'; font-size:36px; font-weight:500">¥ 0</div>
     </div>
-    <div id="history-list" style="text-align:center; padding:40px; color:var(--ink3); font-size:13px;">履歴がありません</div>
+    <div style="text-align:center; padding:40px; color:var(--ink3);">履歴はありません</div>
   </section>
 
   <section id="input-view" class="view">
@@ -59,18 +56,16 @@ body { margin: 0; background: var(--bg); font-family: 'Zen Maru Gothic', sans-se
       <button class="wallet-btn" data-wallet="business" onclick="setWallet('business')">事業</button>
     </div>
     <div class="category-grid" id="category-grid"></div>
-    <div id="num-display" style="font-family:'DM Mono'; font-size:42px; text-align:right; padding:15px; background:var(--surface); border-radius:15px; margin-bottom:20px;">0</div>
-    <button onclick="save()" style="width:100%; padding:20px; background:var(--accent); color:white; border:none; border-radius:18px; font-size:18px; font-weight:700;">保存する</button>
-    <button onclick="showView('main')" style="width:100%; margin-top:10px; background:none; border:none; color:var(--ink3); font-weight:700;">キャンセル</button>
+    <div style="font-family:'DM Mono'; font-size:42px; text-align:right; padding:15px; background:var(--surface); border-radius:15px; margin:20px 0;">0</div>
+    <button onclick="showView('main')" style="width:100%; padding:20px; background:var(--accent); color:white; border:none; border-radius:18px; font-size:18px; font-weight:700;">保存する</button>
   </section>
 
   <section id="settings-view" class="view">
-    <div style="font-weight:700; margin-bottom:20px;">設定</div>
-    <div style="background:var(--surface); border-radius:15px; padding:20px; color:var(--ink2); font-size:14px;">
-      アプリバージョン: 8.0<br>
-      データ保存先: ローカル
+    <div style="font-weight:700; margin-bottom:20px;">⚙️ 設定</div>
+    <div style="background:var(--surface); border-radius:15px; padding:20px; font-size:14px; color:var(--ink2);">
+      Version: 8.0<br>
+      Storage: Local / Firestore
     </div>
-    <button onclick="showView('main')" style="width:100%; margin-top:20px; padding:15px; background:var(--surface2); border:none; border-radius:15px; font-weight:700;">戻る</button>
   </section>
 </main>
 
@@ -83,13 +78,16 @@ body { margin: 0; background: var(--bg); font-family: 'Zen Maru Gothic', sans-se
 <button class="fab" id="main-fab" onclick="showView('input')">+</button>
 
 <script>
+// 引き継ぎ書 Ver.8.0 確定カラー
 const categories = [
   { id: 'sales', name: '売上高', color: '#3730a3', icon: '💰' },
   { id: 'outsource', name: '外注費', color: '#be185d', icon: '🎨' },
   { id: 'meeting', name: '会議費', color: '#15803d', icon: '☕' },
   { id: 'utilities', name: '光熱費', color: '#d97706', icon: '💡' },
   { id: 'supplies', name: '消耗品費', color: '#475569', icon: '📦' },
-  { id: 'travel', name: '旅費交通費', color: '#c2410c', icon: '🚃' }
+  { id: 'travel', name: '旅費交通費', color: '#c2410c', icon: '🚃' },
+  { id: 'comm', name: '通信費', color: '#0891b2', icon: '📱' },
+  { id: 'books', name: '書籍・研修費', color: '#dc2626', icon: '📚' }
 ];
 
 function init() {
@@ -104,10 +102,8 @@ function init() {
 
 function showView(viewId) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  const target = document.getElementById(viewId + '-view');
-  if(target) target.classList.add('active');
+  document.getElementById(viewId + '-view').classList.add('active');
   document.getElementById('main-fab').style.display = (viewId === 'main') ? 'flex' : 'none';
-  window.scrollTo(0, 0);
 }
 
 function setWallet(w) {
@@ -117,8 +113,6 @@ function setWallet(w) {
 function setCategory(id) {
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.id === 'cat-' + id));
 }
-
-function save() { alert('保存しました'); showView('main'); }
 
 window.onload = init;
 </script>
