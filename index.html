@@ -6,36 +6,98 @@
 <title>RakuThrough — ラクスルー Ver.8.0</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@900&family=Zen+Maru+Gothic:wght@400;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
+/* ============================================================
+   CSS変数（Ver.8.0 確定カラー）
+   ============================================================ */
 :root {
   --bg: #f5f4f0; --surface: #ffffff; --surface2: #f0efe9;
   --ink: #1a1a18; --ink2: #6b6a64; --ink3: #a8a79f;
-  --accent: #1a56db; /* 個人：青 */
+  --accent: #1a56db; /* 青色申告の青 */
   --accent-light: #e8f0fb;
+  --red: #c0392b; --red-light: #fdf0ee;
+  --amber: #b8860b; --amber-light: #fdf8e8;
+  /* 科目別カラー */
   --indigo: #3730a3; --magenta: #be185d; --cyan: #0891b2; --green: #15803d; --orange: #c2410c; --slate: #475569;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-body { margin: 0; background: var(--bg); font-family: 'Zen Maru Gothic', sans-serif; }
+body {
+  margin: 0; padding: 0; background: var(--bg);
+  font-family: 'Zen Maru Gothic', sans-serif; color: var(--ink);
+  line-height: 1.6; overflow-x: hidden;
+}
 
-/* 元のデザインを継承したヘッダーとナビ */
-.header { position: sticky; top: 0; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px); z-index: 2000; padding: 15px 20px; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; }
-.nav-bar { position: fixed; bottom: 0; width: 100%; background: var(--surface); z-index: 2000; display: flex; justify-content: space-around; padding: 10px 0 calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(0,0,0,0.05); }
+/* ヘッダー */
+.header {
+  position: sticky; top: 0; background: rgba(255,255,255,0.8);
+  backdrop-filter: blur(10px); padding: 15px 20px;
+  display: flex; justify-content: space-between; align-items: center;
+  z-index: 2000; border-bottom: 1px solid rgba(0,0,0,0.05);
+}
 
+/* ナビゲーションバー */
+.nav-bar {
+  position: fixed; bottom: 0; width: 100%; background: var(--surface);
+  display: flex; justify-content: space-around; padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(0,0,0,0.05); z-index: 2000;
+}
+.nav-item {
+  background: none; border: none; color: var(--ink3); font-size: 20px;
+  text-align: center; cursor: pointer; transition: 0.2s;
+}
+.nav-item.active { color: var(--accent); }
+
+/* ビュー制御 */
 .view { display: none; padding: 20px; padding-bottom: 120px; min-height: 100vh; }
 .view.active { display: block; animation: fadeIn 0.3s ease; }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
 /* 個人(青)・事業(黒) スイッチ */
-.wallet-toggle { display: flex; background: var(--surface2); padding: 4px; border-radius: 12px; margin-bottom: 20px; }
-.wallet-btn { flex: 1; padding: 12px; border-radius: 10px; border: none; background: transparent; font-weight: 700; color: var(--ink2); cursor: pointer; transition: 0.2s; }
-.wallet-btn[data-wallet="personal"].active { background: var(--accent); color: white; }
-.wallet-btn[data-wallet="business"].active { background: #1e1e1e; color: white; }
+.wallet-toggle {
+  display: flex; background: var(--surface2); padding: 4px;
+  border-radius: 12px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.05);
+}
+.wallet-btn {
+  flex: 1; padding: 12px; border-radius: 10px; border: none;
+  background: transparent; font-weight: 700; font-size: 14px;
+  color: var(--ink2); cursor: pointer; transition: all 0.2s;
+}
+/* 個人：青色申告の青へ変更 */
+.wallet-btn[data-wallet="personal"].active {
+  background: var(--accent); color: white;
+  box-shadow: 0 4px 12px rgba(26, 86, 219, 0.3);
+}
+.wallet-btn[data-wallet="business"].active {
+  background: #1e1e1e; color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
 
+/* カテゴリボタン */
 .category-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
-.cat-btn { padding: 15px 5px; border-radius: 15px; border: 2px solid transparent; background: var(--surface); text-align: center; display: flex; flex-direction: column; align-items: center; gap: 5px; font-weight: 700; cursor: pointer; }
-.cat-btn.active { border-color: currentColor; }
+.cat-btn {
+  padding: 15px 5px; border-radius: 15px; border: 2px solid transparent;
+  background: var(--surface); font-size: 11px; font-weight: 700;
+  text-align: center; cursor: pointer; transition: 0.2s;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+}
+.cat-btn.active { border-color: currentColor; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
 
-.fab { position: fixed; right: 20px; bottom: calc(85px + env(safe-area-inset-bottom)); width: 60px; height: 60px; background: var(--accent); color: white; border-radius: 30px; display: flex; justify-content: center; align-items: center; font-size: 30px; box-shadow: 0 8px 20px rgba(26,86,219,0.3); z-index: 2100; border: none; }
+/* FAB (+ボタン) */
+.fab {
+  position: fixed; right: 20px; bottom: calc(85px + env(safe-area-inset-bottom));
+  width: 60px; height: 60px; background: var(--accent);
+  color: white; border-radius: 30px; display: flex;
+  justify-content: center; align-items: center; font-size: 30px;
+  box-shadow: 0 8px 20px rgba(26, 86, 219, 0.4); z-index: 2100;
+  border: none; cursor: pointer;
+}
+
+/* 入力ディスプレイ */
+.num-display {
+  font-family: 'DM Mono', monospace; font-size: 42px; text-align: right;
+  padding: 15px; background: var(--surface); border-radius: 15px; margin-bottom: 20px;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.03);
+}
 </style>
 </head>
 <body>
@@ -51,8 +113,8 @@ body { margin: 0; background: var(--bg); font-family: 'Zen Maru Gothic', sans-se
       <div style="font-size:14px; color:var(--ink2)">今月の経費（暫定）</div>
       <div id="total-expense" style="font-family:'DM Mono'; font-size:36px; font-weight:500">¥ 0</div>
     </div>
-    <div id="history-list">
-      <div style="text-align:center; padding:40px; color:var(--ink3); font-size:13px;">まだ履歴がありません</div>
+    <div id="history-list" style="text-align:center; padding:40px; color:var(--ink3); font-size:13px;">
+      履歴がありません
     </div>
   </section>
 
@@ -61,29 +123,38 @@ body { margin: 0; background: var(--bg); font-family: 'Zen Maru Gothic', sans-se
       <button class="wallet-btn active" data-wallet="personal" onclick="setWallet('personal')">個人</button>
       <button class="wallet-btn" data-wallet="business" onclick="setWallet('business')">事業</button>
     </div>
+    
     <div class="category-grid" id="category-grid"></div>
-    <div id="num-display" style="font-family:'DM Mono'; font-size:48px; text-align:right; padding:20px; background:var(--surface); border-radius:15px; margin-bottom:20px; box-shadow:inset 0 2px 5px rgba(0,0,0,0.05)">0</div>
-    <button onclick="save()" style="width:100%; padding:20px; background:var(--accent); color:white; border:none; border-radius:18px; font-size:18px; font-weight:700;">保存する</button>
+
+    <div class="num-display" id="num-display">0</div>
+    
+    <input type="text" id="memo-input" placeholder="メモを入力..." style="width:100%; padding:18px; border:none; background:var(--surface); border-radius:15px; margin-bottom:15px; font-size:16px;">
+    
+    <button onclick="save()" style="width:100%; padding:20px; background:var(--accent); color:white; border:none; border-radius:18px; font-size:18px; font-weight:700; box-shadow:0 4px 15px rgba(26,86,219,0.3)">保存する</button>
+    
     <button onclick="showView('main')" style="width:100%; margin-top:15px; background:none; border:none; color:var(--ink3); font-weight:700;">キャンセル</button>
   </section>
 </main>
 
 <nav class="nav-bar">
-  <button onclick="showView('main')" style="background:none; border:none; font-size:22px;">🏠</button>
-  <button onclick="showView('history')" style="background:none; border:none; font-size:22px;">📜</button>
-  <button onclick="showView('settings')" style="background:none; border:none; font-size:22px;">⚙️</button>
+  <button class="nav-item active" id="nav-home" onclick="showView('main')">🏠</button>
+  <button class="nav-item" id="nav-history" onclick="showView('history')">📜</button>
+  <button class="nav-item" id="nav-settings" onclick="showView('settings')">⚙️</button>
 </nav>
 
 <button class="fab" id="main-fab" onclick="showView('input')">+</button>
 
 <script>
+// 引き継ぎ書 Ver.8.0 準拠のカテゴリ
 const categories = [
   { id: 'sales', name: '売上高', color: '#3730a3', icon: '💰' },
   { id: 'outsource', name: '外注費', color: '#be185d', icon: '🎨' },
   { id: 'meeting', name: '会議費', color: '#15803d', icon: '☕' },
   { id: 'utilities', name: '光熱費', color: '#d97706', icon: '💡' },
   { id: 'supplies', name: '消耗品費', color: '#475569', icon: '📦' },
-  { id: 'travel', name: '旅費交通費', color: '#c2410c', icon: '🚃' }
+  { id: 'travel', name: '旅費交通費', color: '#c2410c', icon: '🚃' },
+  { id: 'comm', name: '通信費', color: '#0891b2', icon: '📱' },
+  { id: 'books', name: '書籍・研修費', color: '#dc2626', icon: '📚' }
 ];
 
 function init() {
@@ -100,6 +171,11 @@ function showView(viewId) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   const target = document.getElementById(viewId + '-view');
   if(target) target.classList.add('active');
+
+  // ナビとFABの表示制御
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if(viewId === 'main') document.getElementById('nav-home').classList.add('active');
+  
   document.getElementById('main-fab').style.display = (viewId === 'main') ? 'flex' : 'none';
   window.scrollTo(0, 0);
 }
@@ -112,7 +188,7 @@ function setCategory(id) {
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.toggle('active', b.id === 'cat-' + id));
 }
 
-function save() { alert('保存しました！'); showView('main'); }
+function save() { alert('保存しました'); showView('main'); }
 
 window.onload = init;
 </script>
