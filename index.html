@@ -218,7 +218,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 /* ユーザーが「個人財布から？事業口座から？」を選ぶトグル */
 .wallet-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
 .wallet-btn { padding: 10px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface); font-size: 13px; font-weight: 500; color: var(--ink2); cursor: pointer; font-family: 'Noto Sans JP', sans-serif; transition: all 0.15s; text-align: center; }
-.wallet-btn.active-personal { border-color: var(--purple); background: var(--purple-light); color: var(--purple); }
+.wallet-btn.active-personal { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
 .wallet-btn.active-business { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
 
 /* ===== 入金ステータス（Ver.7.0新規・収入タブのみ表示）===== */
@@ -246,14 +246,24 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .filter-chip { padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); font-size: 12px; color: var(--ink2); cursor: pointer; }
 .filter-chip.active { background: var(--accent); color: white; border-color: var(--accent); }
 
-/* ===== 設定ページ ===== */
-.settings-section { margin-bottom: 24px; }
+/* ===== 設定ページ・アコーディオン ===== */
+.settings-section { margin-bottom: 8px; }
 .settings-card { background: var(--surface); border-radius: var(--radius); overflow: hidden; }
 .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; }
 .settings-row:last-child { border-bottom: none; }
 .settings-row-label { font-size: 14px; color: var(--ink); }
 .settings-row-value { font-size: 13px; color: var(--ink3); }
 .settings-row-arrow { font-size: 14px; color: var(--ink3); }
+/* アコーディオンのヘッダー */
+.accordion-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: var(--surface); border-radius: var(--radius); cursor: pointer; border: none; width: 100%; text-align: left; font-family: 'Noto Sans JP', sans-serif; transition: background 0.15s; margin-bottom: 1px; }
+.accordion-header:active { background: var(--surface2); }
+.accordion-title-wrap { display: flex; align-items: center; gap: 8px; }
+.accordion-title { font-size: 14px; font-weight: 600; color: var(--ink); }
+.accordion-arrow { font-size: 11px; color: var(--ink3); transition: transform 0.25s ease; display: inline-block; }
+.accordion-header.open .accordion-arrow { transform: rotate(180deg); }
+/* アコーディオンの中身 */
+.accordion-body { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; background: var(--bg); border-radius: 0 0 var(--radius) var(--radius); padding: 0 16px; }
+.accordion-body.open { max-height: 1400px; padding: 4px 16px 16px; }
 
 /* 科目管理リスト */
 .cat-manage { display: flex; flex-direction: column; gap: 6px; }
@@ -523,38 +533,53 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     </div>
   </div>
 
-  <!-- 設定ページ -->
+  <!-- 設定ページ（アコーディオン形式）-->
   <div class="page" id="page-settings">
-    <!-- アカウント -->
+
+    <!-- ① アカウント（デフォルト開き）-->
     <div class="settings-section">
-      <div class="section-title">アカウント</div>
-      <div class="settings-card">
-        <div class="settings-row">
-          <div class="settings-row-label">ログイン中</div>
-          <div class="settings-row-value" id="user-email">-</div>
+      <button class="accordion-header open" onclick="toggleAccordion(this)">
+        <div class="accordion-title-wrap"><span>👤</span><span class="accordion-title">アカウント</span></div>
+        <span class="accordion-arrow">▼</span>
+      </button>
+      <div class="accordion-body open">
+        <div class="settings-card" style="margin-bottom:8px">
+          <div class="settings-row" style="cursor:default">
+            <div class="settings-row-label">ログイン中</div>
+            <div class="settings-row-value" id="user-email">-</div>
+          </div>
+        </div>
+        <button class="logout-btn" onclick="logout()">ログアウト</button>
+      </div>
+    </div>
+
+    <!-- ② 勘定科目（デフォルト閉じ）-->
+    <div class="settings-section">
+      <button class="accordion-header" onclick="toggleAccordion(this)">
+        <div class="accordion-title-wrap"><span>📂</span><span class="accordion-title">勘定科目のカスタマイズ</span></div>
+        <span class="accordion-arrow">▼</span>
+      </button>
+      <div class="accordion-body">
+        <div class="cat-manage" id="cat-manage-list"></div>
+        <div class="add-cat-form">
+          <select class="add-cat-input" id="new-cat-type" style="max-width:90px">
+            <option value="income">収入</option>
+            <option value="expense">経費</option>
+          </select>
+          <input class="add-cat-input" type="text" id="new-cat-name" placeholder="科目名を入力">
+          <button class="add-cat-btn" onclick="addCategory()">追加</button>
         </div>
       </div>
-      <button class="logout-btn" onclick="logout()">ログアウト</button>
     </div>
 
-    <!-- 勘定科目 -->
+    <!-- ③ 棚卸し（デフォルト閉じ）-->
     <div class="settings-section">
-      <div class="section-title">勘定科目のカスタマイズ</div>
-      <div class="cat-manage" id="cat-manage-list"></div>
-      <div class="add-cat-form">
-        <select class="add-cat-input" id="new-cat-type" style="max-width:90px">
-          <option value="income">収入</option>
-          <option value="expense">経費</option>
-        </select>
-        <input class="add-cat-input" type="text" id="new-cat-name" placeholder="科目名を入力">
-        <button class="add-cat-btn" onclick="addCategory()">追加</button>
-      </div>
-    </div>
-
-    <!-- 棚卸し・売上原価 -->
-    <div class="settings-section">
-      <div class="section-title">棚卸し・売上原価</div>
-      <div class="settings-card" style="padding:16px">
+      <button class="accordion-header" onclick="toggleAccordion(this)">
+        <div class="accordion-title-wrap"><span>📦</span><span class="accordion-title">棚卸し・売上原価</span></div>
+        <span class="accordion-arrow">▼</span>
+      </button>
+      <div class="accordion-body">
+      <div style="padding:4px 0 0">
         <p style="font-size:12px;color:var(--ink2);margin-bottom:14px;line-height:1.6">
           Boothグッズなどの在庫がある場合に入力。<br>
           <b>売上原価 ＝ 期首 ＋ 仕入 − 期末</b>
@@ -571,12 +596,17 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
         </div>
         <button onclick="saveInventory()" style="margin-top:12px;width:100%;padding:10px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;font-family:'Noto Sans JP',sans-serif">保存する</button>
       </div>
+      </div>
     </div>
 
-    <!-- 固定資産・減価償却 -->
+    <!-- ④ 固定資産・減価償却（デフォルト閉じ）-->
     <div class="settings-section">
-      <div class="section-title">固定資産・減価償却</div>
-      <div class="settings-card" style="padding:16px">
+      <button class="accordion-header" onclick="toggleAccordion(this)">
+        <div class="accordion-title-wrap"><span>🖥️</span><span class="accordion-title">固定資産・減価償却</span></div>
+        <span class="accordion-arrow">▼</span>
+      </button>
+      <div class="accordion-body">
+      <div style="padding:4px 0 0">
         <p style="font-size:12px;color:var(--ink2);margin-bottom:4px;line-height:1.7">
           10万円以上のPC・iPad・機材などを登録。<br>
           <b>青色申告なら40万円未満は一括経費OK</b>（少額特例・2026年改正・2028年3月末まで）
@@ -620,11 +650,16 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
           <button onclick="saveAsset()" style="margin-top:14px;width:100%;padding:12px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;font-family:'Noto Sans JP',sans-serif">この資産を登録する</button>
         </div>
       </div>
+      </div>
     </div>
 
-    <!-- テーマ選択 -->
+    <!-- ⑤ テーマ（デフォルト閉じ）-->
     <div class="settings-section">
-      <div class="section-title">テーマ・見た目</div>
+      <button class="accordion-header" onclick="toggleAccordion(this)">
+        <div class="accordion-title-wrap"><span>🎨</span><span class="accordion-title">テーマ・見た目</span></div>
+        <span class="accordion-arrow">▼</span>
+      </button>
+      <div class="accordion-body">
       <div class="theme-grid">
         <button class="theme-btn active" id="theme-btn-default" onclick="setTheme('default')">
           <div class="theme-preview" style="background:#f5f4f0;border:1px solid #e0dfd8;"><span style="font-size:13px;font-weight:700;color:#1a56db;">Aa</span></div>
@@ -644,14 +679,20 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
         </button>
       </div>
     </div>
+    </div>
 
-    <!-- データ出力 -->
+    <!-- ⑥ データ出力（デフォルト閉じ）-->
     <div class="settings-section">
-      <div class="section-title">データ出力</div>
-      <div class="settings-card">
-        <div class="settings-row" onclick="exportCSV()">
-          <div class="settings-row-label">CSVエクスポート（弥生対応）</div>
-          <div class="settings-row-arrow">↓</div>
+      <button class="accordion-header" onclick="toggleAccordion(this)">
+        <div class="accordion-title-wrap"><span>💾</span><span class="accordion-title">データ出力</span></div>
+        <span class="accordion-arrow">▼</span>
+      </button>
+      <div class="accordion-body">
+        <div class="settings-card">
+          <div class="settings-row" onclick="exportCSV()">
+            <div class="settings-row-label">CSVエクスポート（弥生対応）</div>
+            <div class="settings-row-arrow">↓</div>
+          </div>
         </div>
       </div>
     </div>
@@ -771,20 +812,23 @@ const db   = getFirestore(app);
 // ★ 履歴の cat-dot に使用。入力フォームのボタンには色をつけない。
 // ============================================================
 const DEFAULT_CATEGORIES = [
-  // 収入系
-  { id: 'sales',          name: '売上高',       type: 'income',  emoji: '💰', color: '#3730a3' }, // インディゴ
-  { id: 'platform_sales', name: 'プラットフォーム', type: 'income', emoji: '🛍️', color: '#3730a3' }, // Booth/Skeb等
-  { id: 'misc-income',    name: '雑収入',        type: 'income',  emoji: '💵', color: '#0891b2' },
-  // 経費系
-  { id: 'outsource',      name: '外注費',        type: 'expense', emoji: '🤝', color: '#be185d' }, // マゼンタ
-  { id: 'comm',           name: '通信費',        type: 'expense', emoji: '📱', color: '#0891b2' },
-  { id: 'supplies',       name: '消耗品費',      type: 'expense', emoji: '📦', color: '#475569' }, // グレー
-  { id: 'travel',         name: '旅費交通費',    type: 'expense', emoji: '🚃', color: '#c2410c' }, // オレンジ
-  { id: 'books',          name: '書籍・研修費',  type: 'expense', emoji: '📚', color: '#dc2626' },
-  { id: 'ads',            name: '広告宣伝費',    type: 'expense', emoji: '📣', color: '#db2777' },
-  { id: 'meeting',        name: '会議費',        type: 'expense', emoji: '☕', color: '#15803d' }, // グリーン
-  { id: 'deprec',         name: '減価償却費',    type: 'expense', emoji: '🖥️', color: '#475569' },
-  { id: 'other',          name: 'その他経費',    type: 'expense', emoji: '📋', color: '#6b7280' },
+  // ===== 収入 =====
+  // Booth・Skeb・FANBOX・受託デザイン等、売上はすべて「売上高」でOK。
+  // プラットフォーム名は摘要欄（「Booth売上」など）に書けば十分。
+  { id: 'sales',       name: '売上高', type: 'income',  emoji: '💰', color: '#3730a3' }, // インディゴ
+  { id: 'misc-income', name: '雑収入', type: 'income',  emoji: '💵', color: '#0891b2' }, // アフィリ・株配当・補助金等
+
+  // ===== 経費 =====
+  { id: 'outsource', name: '外注費',     type: 'expense', emoji: '🤝', color: '#be185d' }, // イラスト・MIX・モデリング依頼
+  { id: 'comm',      name: '通信費',     type: 'expense', emoji: '📱', color: '#0891b2' }, // スマホ・ネット回線
+  { id: 'utilities', name: '光熱費',     type: 'expense', emoji: '💡', color: '#d97706' }, // 電気・ガス・水道（按分）
+  { id: 'supplies',  name: '消耗品費',   type: 'expense', emoji: '📦', color: '#475569' }, // 機材・PC周辺（10万未満）
+  { id: 'travel',    name: '旅費交通費', type: 'expense', emoji: '🚃', color: '#c2410c' }, // 遠征・イベント移動
+  { id: 'books',     name: '書籍・研修費', type: 'expense', emoji: '📚', color: '#dc2626' }, // 技術書・講座・セミナー
+  { id: 'ads',       name: '広告宣伝費', type: 'expense', emoji: '📣', color: '#db2777' }, // SNS広告・同人誌告知
+  { id: 'meeting',   name: '会議費',     type: 'expense', emoji: '☕', color: '#15803d' }, // 打ち合わせ（「ご飯」ではなく）
+  { id: 'deprec',    name: '減価償却費', type: 'expense', emoji: '🖥️', color: '#475569' }, // 10万円以上の資産→設定タブで登録
+  { id: 'other',     name: 'その他経費', type: 'expense', emoji: '📋', color: '#6b7280' }, // 上記に当てはまらないもの
 ];
 
 // ====== アプリ状態 ======
@@ -807,17 +851,20 @@ onAuthStateChanged(auth, async (user) => {
   document.getElementById('loading').style.display = 'none';
   if (user) {
     currentUser = user;
-    document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    // アバター設定
+    // アバター・メール設定（表示前に済ませる）
     const av = document.getElementById('user-avatar');
     if (user.photoURL) av.innerHTML = `<img src="${user.photoURL}" alt="">`;
     else av.textContent = user.displayName?.[0] || user.email?.[0]?.toUpperCase() || '?';
     document.getElementById('user-email').textContent = user.email || '';
-    await loadCategories();
-    await loadTransactions();
-    // Ver.7.0 スキーマ移行（既存データの自動マイグレーション）
-    await migrateTransactions();
+    // データ読み込み → その後アプリ表示（順序が大事）
+    // 表示→読み込みの順だと途中タップで入力ページが空になるバグを防ぐ
+    try { await loadCategories(); } catch(e) { console.error('loadCategories:', e); }
+    try { await loadTransactions(); } catch(e) { console.error('loadTransactions:', e); }
+    // スキーマ移行は独立してtry-catch（失敗してもアプリは動く）
+    try { await migrateTransactions(); } catch(e) { console.error('migrateTransactions:', e); }
+    // ここで初めて表示 → initEntryForm が必ず実行される
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
     initEntryForm();
     updateHome();
   } else {
@@ -956,8 +1003,13 @@ async function loadTransactions() {
 async function loadCategories() {
   try {
     const snap       = await getDocs(userCol('categories'));
-    const customCats = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    // デフォルト定数 + ユーザー追加カスタム科目をマージ
+    // Firestoreから取得した科目のうち、DEFAULT_CATEGORIESと同じidは除外する。
+    // 旧Ver.5.1でデフォルト科目をFirestoreへ書き込んでいたため残骸が残っている場合の対策。
+    const defaultIds = new Set(DEFAULT_CATEGORIES.map(c => c.id));
+    const customCats = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(c => !defaultIds.has(c.id)); // デフォルトと重複するものを除外
+    // デフォルト定数 + ユーザー追加カスタム科目のみマージ
     categories = [...DEFAULT_CATEGORIES, ...customCats];
   } catch(e) {
     categories = [...DEFAULT_CATEGORIES]; // エラー時はデフォルトのみ
@@ -1061,8 +1113,11 @@ function initEntryForm() {
 
 // 科目グリッド描画（入力時：色なし・選択時のみハイライト）
 function renderCategoryGrid() {
-  const grid     = document.getElementById('category-grid');
-  const filtered = categories.filter(c => c.type === currentEntryType);
+  const grid = document.getElementById('category-grid');
+  if (!grid) return;
+  // categoriesが空の場合はDEFAULT_CATEGORIESで補完
+  const src = (categories && categories.length > 0) ? categories : DEFAULT_CATEGORIES;
+  const filtered = src.filter(c => c.type === currentEntryType);
   grid.innerHTML = filtered.map(cat =>
     `<button class="cat-btn${selectedCategory === cat.id ? ' selected' : ''}"
        onclick="selectCategory('${cat.id}')">${cat.emoji} ${cat.name}</button>`
@@ -1592,6 +1647,15 @@ function rotateCatchcopy() {
   }, 600);
 }
 setInterval(rotateCatchcopy, 3000);
+
+// ====== アコーディオン開閉 ======
+// ヘッダーをタップすると中身がスライドで開閉する
+window.toggleAccordion = (header) => {
+  const body = header.nextElementSibling; // ヘッダーの次の兄弟要素がbody
+  const isOpen = header.classList.contains('open');
+  header.classList.toggle('open', !isOpen);
+  body.classList.toggle('open', !isOpen);
+};
 
 // ====== Toast通知 ======
 window.showToast = (msg) => {
