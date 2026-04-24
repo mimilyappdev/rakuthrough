@@ -79,7 +79,7 @@ padding-bottom: 80px;
 }
 
 /* ===== Loading ===== */
-.loading-overlay { position: fixed; inset: 0; background: var(–bg); display: flex; align-items: center; justify-content: center; z-index: 999; flex-direction: column; gap: 12px; }
+.loading-overlay { position: fixed; inset: 0; background: var(–bg); display: flex; align-items: center; justify-content: center; z-index: 999; flex-direction: column; gap: 12px; transition: opacity 0.2s; }
 .spinner { width: 36px; height: 36px; border: 3px solid var(–border); border-top-color: var(–accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading-text { font-size: 13px; color: var(–ink2); }
@@ -869,7 +869,10 @@ let selectedCategory    = null;
 try { await getRedirectResult(auth); } catch(e) { console.log('redirect:', e?.code); }
 
 onAuthStateChanged(auth, async (user) => {
-  document.getElementById('loading').style.display = 'none';
+  const loadingEl = document.getElementById('loading');
+  loadingEl.style.opacity = '0';
+  loadingEl.style.pointerEvents = 'none';
+  setTimeout(() => { loadingEl.style.display = 'none'; }, 250);
   if (user) {
     currentUser = user;
     // アバター・メール設定（表示前に済ませる）
@@ -886,8 +889,11 @@ onAuthStateChanged(auth, async (user) => {
     // ここで初めて表示 → initEntryForm が必ず実行される
     document.getElementById('auth-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    initEntryForm();
-    updateHome();
+    // requestAnimationFrameでDOM描画完了後に実行を保証
+    requestAnimationFrame(() => {
+      initEntryForm();
+      updateHome();
+    });
   } else {
     document.getElementById('auth-screen').style.display = 'flex';
     document.getElementById('app').style.display = 'none';
