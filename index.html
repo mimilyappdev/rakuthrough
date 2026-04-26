@@ -126,10 +126,10 @@ body {
 .summary-sub-label { font-size: 11px; opacity: 0.7; margin-bottom: 4px; }
 .summary-sub-amount { font-size: 18px; font-weight: 600; font-family: var(--mono); }
 /* 売掛残高カード（pending収入がある月のみ表示）*/
-.pending-card { background: var(--amber-light); border: 1px solid rgba(184,134,11,0.25); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 14px; display: none; justify-content: space-between; align-items: center; }
+.pending-card { background: var(--accent-light); border: 1px solid rgba(184,134,11,0.25); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 14px; display: none; justify-content: space-between; align-items: center; }
 .pending-card.show { display: flex; }
-.pending-card-label { font-size: 12px; color: var(--amber); font-weight: 600; }
-.pending-card-amount { font-size: 17px; font-weight: 700; font-family: var(--mono); color: var(--amber); }
+.pending-card-label { font-size: 12px; color: var(--accent); font-weight: 600; }
+.pending-card-amount { font-size: 17px; font-weight: 700; font-family: var(--mono); color: var(--accent); }
 
 .section-title { font-size: 13px; font-weight: 500; color: var(--ink2); margin-bottom: 12px; letter-spacing: 0.02em; }
 .chart-wrap { background: var(--surface); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
@@ -148,7 +148,7 @@ body {
 .tx-list { display: flex; flex-direction: column; gap: 8px; }
 .tx-card { background: var(--surface); border-radius: var(--radius-sm); padding: 13px 16px; display: flex; align-items: center; gap: 12px; }
 /* 売掛（pending）の取引は左ボーダーをアンバーに */
-.tx-card.is-pending { border-left: 3px solid var(--amber); }
+.tx-card.is-pending { border-left: 3px solid var(--accent); }
 .tx-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
 .tx-icon.income { background: var(--accent-light); }
 .tx-icon.expense { background: var(--red-light); }
@@ -167,9 +167,9 @@ body {
 
 /* バッジ類 ===================== */
 /* クレジットカードバッジ */
-.card-badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--amber-light); color: var(--amber); font-weight: 500; margin-left: 4px; vertical-align: middle; }
+.card-badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--accent-light); color: var(--accent); font-weight: 500; margin-left: 4px; vertical-align: middle; }
 /* 売掛（未入金）バッジ */
-.pending-badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--amber-light); color: var(--amber); font-weight: 600; margin-left: 4px; vertical-align: middle; }
+.pending-badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--accent-light); color: var(--accent); font-weight: 600; margin-left: 4px; vertical-align: middle; }
 /* 源泉徴収バッジ */
 .withholding-badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--accent-light); color: var(--accent); font-weight: 500; margin-left: 4px; vertical-align: middle; }
 /* 事業口座バッジ（個人はデフォルトなので非表示）*/
@@ -178,9 +178,9 @@ body {
 .cat-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-right: 2px; }
 
 /* クレカサマリー（履歴・クレカフィルター時）*/
-.card-summary { background: var(--amber-light); border: 1px solid rgba(184,134,11,0.2); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
-.card-summary-label { font-size: 12px; color: var(--amber); font-weight: 500; }
-.card-summary-amount { font-size: 20px; font-weight: 600; font-family: var(--mono); color: var(--amber); }
+.card-summary { background: var(--accent-light); border: 1px solid rgba(184,134,11,0.2); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+.card-summary-label { font-size: 12px; color: var(--accent); font-weight: 500; }
+.card-summary-amount { font-size: 20px; font-weight: 600; font-family: var(--mono); color: var(--accent); }
 
 /* ===== 入力フォーム ===== */
 .type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
@@ -225,13 +225,13 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 /* Booth・Skeb・FANBOXなど「売った日≠入金日」の売掛管理 */
 .status-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
 .status-btn { padding: 10px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface); font-size: 13px; font-weight: 500; color: var(--ink2); cursor: pointer; font-family: 'Noto Sans JP', sans-serif; transition: all 0.15s; text-align: center; }
-.status-btn.active-settled { border-color: var(--green); background: var(--green-light); color: var(--green); }
-.status-btn.active-pending { border-color: var(--amber); background: var(--amber-light); color: var(--amber); }
+.status-btn.active-settled { border-color: var(--accent); background: var(--accent-light); color: var(--accent); font-weight:700; }
+.status-btn.active-pending { border-color: var(--accent); background: var(--accent-light); color: var(--accent); font-weight:700; }
 
 /* 支払い方法トグル */
 .payment-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
 .payment-btn { padding: 10px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface); font-size: 13px; font-weight: 500; color: var(--ink2); cursor: pointer; font-family: 'Noto Sans JP', sans-serif; transition: all 0.15s; }
-.payment-btn.active-card { border-color: var(--amber); background: var(--amber-light); color: var(--amber); }
+.payment-btn.active-card { border-color: var(--accent); background: var(--accent-light); color: var(--accent); font-weight: 700; }
 .payment-btn.active-cash { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
 
 .submit-btn { width: 100%; padding: 16px; border-radius: var(--radius); background: var(--accent); color: white; border: none; font-size: 16px; font-weight: 700; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; transition: opacity 0.15s, transform 0.1s; }
@@ -354,11 +354,12 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .seg-btn .seg-main { font-size: 15px; font-weight: 700; }
 .seg-btn .seg-sub  { font-size: 10px; color: var(--ink3); font-weight: 400; }
 .seg-btn.seg-on {
-  background: var(--surface);
+  background: var(--accent-light);
   color: var(--accent);
-  box-shadow: 0 1px 6px rgba(0,0,0,0.1);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(26,86,219,0.15);
 }
-.seg-btn.seg-on .seg-sub { color: rgba(26,86,219,0.55); }
+.seg-btn.seg-on .seg-sub { color: rgba(26,86,219,0.7); }
 
 /* ============================================================
    Ver.8.0: ❓ツールチップ
@@ -500,13 +501,8 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 
     <div class="form-card">
       <!-- ① 個人/事業スイッチ（Ver.8.0: ラベル刷新・❓ツールチップ）-->
-      <div class="form-group">
-        <label class="form-label">
-          財布
-          <button class="tip-btn" onclick="toggleTip(this)">? ヘルプ
-            <span class="tip-box">複式簿記の自動仕訳に使います。個人口座と事業口座が別の場合は「事業」を選んでください。</span>
-          </button>
-        </label>
+      <div class="form-group" style="margin-bottom:10px;">
+        <label class="form-label">個人・事業とは？<button class="tip-btn" onclick="toggleTip(this)">?<span class="tip-box">個人：自分の財布・個人口座から支払い。事業：事業専用口座から支払い。複式簿記の自動仕訳に使います。</span></button></label>
         <div class="seg-toggle">
           <button class="seg-btn seg-on" id="btn-wallet-personal" onclick="setWallet('personal')">
             <span class="seg-main">個人</span>
@@ -520,14 +516,13 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
       <!-- ② 金額 + 源泉ボタン（収入時のみ）-->
       <div class="form-group">
         <label class="form-label">金額（円）</label>
+        <!-- 源泉説明：源泉ボタンの上に配置・収入タブのみ表示 -->
+        <div id="gensen-help-wrap" style="margin-bottom:5px;">
+          <button class="tip-btn" onclick="toggleTip(this)">? 源泉徴収とは<span class="tip-box">クライアントから支払われる前に税金（10.21%）が引かれる仕組みです。請求書に源泉徴収がある場合は「源泉」ボタンをオンにしてください。</span></button>
+        </div>
         <div class="amount-row">
           <input class="form-input amount-input" type="number" id="entry-amount" placeholder="0" inputmode="numeric" oninput="calcWithholding()">
           <button class="withholding-btn" id="withholding-btn" onclick="toggleWithholding()">源泉</button>
-        </div>
-        <div id="gensen-help-wrap" style="margin-top:5px;">
-          <button class="tip-btn" style="font-size:10px;" onclick="toggleTip(this)">? 源泉徴収とは
-            <span class="tip-box">クライアントから支払われる前に税金（10.21%）が引かれる仕組みです。請求書に源泉徴収がある場合にオンにしてください。</span>
-          </button>
         </div>
         <div class="withholding-result" id="withholding-result"></div>
       </div>
@@ -1209,9 +1204,11 @@ window.setEntryType = (type) => {
   currentEntryType = type;
   document.getElementById('btn-income').className  = 'type-btn' + (type === 'income'  ? ' active-income'  : '');
   document.getElementById('btn-expense').className = 'type-btn' + (type === 'expense' ? ' active-expense' : '');
-  // 源泉ボタンは収入タブのみ
+  // 源泉ボタン・源泉説明は収入タブのみ
   const wb = document.getElementById('withholding-btn');
   if (wb) wb.style.display = type === 'income' ? '' : 'none';
+  const gwrap = document.getElementById('gensen-help-wrap');
+  if (gwrap) gwrap.style.display = type === 'income' ? '' : 'none';
   if (type === 'expense') resetWithholding();
   // 入金ステータスは収入タブのみ表示
   const sw = document.getElementById('status-wrap');
