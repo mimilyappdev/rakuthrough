@@ -542,9 +542,9 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
         <div id="gensen-help-wrap" style="margin-bottom:5px;">
         </div>
         <div class="amount-row">
-          <input class="form-input amount-input" type="number" id="entry-amount" placeholder="0" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'');calcWithholding()">
+          <input class="form-input amount-input" type="text" id="entry-amount" placeholder="0" inputmode="numeric" oninput="formatAmountInput(this);calcWithholding()">
           <button class="withholding-btn" id="withholding-btn" onclick="toggleWithholding()">源泉</button>
-          <button class="tip-btn" onclick="toggleTip(this)" style="flex-shrink:0;">?<span class="tip-box">クライアントから支払われる前に税金（10.21%）が引かれる仕組みです。源泉徴収がある場合は「源泉」ボタンをオンにしてください。</span></button>
+          <button class="tip-btn" id="gensen-tip-btn" onclick="toggleTip(this)" style="flex-shrink:0;">?<span class="tip-box">クライアントから支払われる前に税金（10.21%）が引かれる仕組みです。源泉徴収がある場合は「源泉」ボタンをオンにしてください。</span></button>
         </div>
         <div class="withholding-result" id="withholding-result"></div>
       </div>
@@ -881,7 +881,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
         <!-- 金額 -->
         <div class="form-group">
           <label class="form-label">金額（円）</label>
-          <input class="form-input amount-input" type="number" id="edit-amount" placeholder="0" inputmode="numeric">
+          <input class="form-input amount-input" type="text" id="edit-amount" placeholder="0" inputmode="numeric" oninput="formatAmountInput(this)">
         </div>
         <!-- 摘要・メモ -->
         <div class="form-row">
@@ -1008,6 +1008,12 @@ let selectedCategory    = null;
 // ====== AUTH ======
 try { await getRedirectResult(auth); } catch(e) { console.log('redirect:', e?.code); }
 
+// ログイン処理中フラグ
+// 理由：signInWithPopupがiPad/Safariでブロックされた際、signInWithRedirectに
+// フォールバックする瞬間にonAuthStateChanged(null)が発火してログイン画面が
+// 再表示されてしまう（2回押しバグ）のを防ぐ
+let isLoggingIn = false;
+
 onAuthStateChanged(auth, async (user) => {
   const loadingEl = document.getElementById('loading');
   loadingEl.style.opacity = '0';
@@ -1054,20 +1060,28 @@ onAuthStateChanged(auth, async (user) => {
     // 保存済みアクセントカラーを復元（プレミアムユーザーのみ）
     restoreAccentColor();
   } else {
+    // ログイン処理中（ポップアップ試行中・リダイレクト中）は再表示しない
+    if (isLoggingIn) return;
     document.getElementById('auth-screen').style.display = 'flex';
     document.getElementById('app').style.display = 'none';
   }
 });
 
 window.loginWithGoogle = async () => {
+  isLoggingIn = true; // ← ログイン開始。onAuthStateChanged(null)が来ても画面を戻さない
   const provider = new GoogleAuthProvider();
   try {
     await signInWithPopup(auth, provider);
+    // 成功した場合はonAuthStateChanged(user)が呼ばれてアプリが表示されるので何もしない
   } catch(e) {
     if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user') {
+      // ポップアップがブロックされた場合はリダイレクト方式に切り替え
       try { await signInWithRedirect(auth, provider); }
-      catch(e2) { showToast('ログインに失敗しました'); }
+      catch(e2) { isLoggingIn = false; showToast('ログインに失敗しました'); }
+    } else if (e.code === 'auth/cancelled-popup-request') {
+      // 複数回クリック時は無視（フラグは維持）
     } else {
+      isLoggingIn = false; // 予期せぬエラーはフラグ解除してログイン画面に戻す
       showToast('ログインに失敗しました: ' + e.code);
     }
   }
@@ -1250,9 +1264,11 @@ window.setEntryType = (type) => {
   currentEntryType = type;
   document.getElementById('btn-income').className  = 'type-btn' + (type === 'income'  ? ' active-income'  : '');
   document.getElementById('btn-expense').className = 'type-btn' + (type === 'expense' ? ' active-expense' : '');
-  // 源泉ボタン・源泉説明は収入タブのみ
+  // 源泉ボタン・源泉?ボタン・源泉説明は収入タブのみ（経費には不要なので非表示）
   const wb = document.getElementById('withholding-btn');
   if (wb) wb.style.display = type === 'income' ? '' : 'none';
+  const gt = document.getElementById('gensen-tip-btn');
+  if (gt) gt.style.display = type === 'income' ? '' : 'none';
   const gwrap = document.getElementById('gensen-help-wrap');
   if (gwrap) gwrap.style.display = type === 'income' ? '' : 'none';
   if (type === 'expense') resetWithholding();
@@ -1355,7 +1371,7 @@ window.selectCategory = (id) => {
 
 // ====== 取引の保存（Ver.7.0: 新フィールド追加）======
 window.submitEntry = async () => {
-  const amount = parseInt(document.getElementById('entry-amount').value);
+  const amount = parseAmountVal(document.getElementById('entry-amount').value);
   const desc   = document.getElementById('entry-desc').value.trim();
   const date   = document.getElementById('entry-date').value;
   const memo   = document.getElementById('entry-memo').value.trim();
@@ -1623,7 +1639,7 @@ window.openEditModal = (id) => {
   const tx = allTransactions.find(t => t.id === id);
   if (!tx) return;
   document.getElementById('edit-tx-id').value  = id;
-  document.getElementById('edit-amount').value = tx.amount;
+  document.getElementById('edit-amount').value = tx.amount ? parseInt(tx.amount).toLocaleString('ja-JP') : '';
   document.getElementById('edit-desc').value   = tx.desc || '';
   document.getElementById('edit-date').value   = tx.date;
   document.getElementById('edit-memo').value   = tx.memo || '';
@@ -1694,7 +1710,7 @@ window.selectEditCategory = (id) => {
 
 window.saveEdit = async () => {
   const id     = document.getElementById('edit-tx-id').value;
-  const amount = parseInt(document.getElementById('edit-amount').value);
+  const amount = parseAmountVal(document.getElementById('edit-amount').value);
   const date   = document.getElementById('edit-date').value;
   const memo   = document.getElementById('edit-memo').value.trim();
   if (!amount || amount <= 0) { showToast('金額を入力してください'); return; }
@@ -1747,6 +1763,21 @@ window.showPage = (name) => {
   if (name === 'settings') { renderCategoryManage(); loadInventory(); loadAssets(); }
 };
 
+// ====== 金額入力フォーマット（カンマ区切り）======
+// 入力中にリアルタイムで ¥1,000 形式にフォーマットする
+// type="text" + inputmode="numeric" で iOS カーソルも維持できる
+window.formatAmountInput = (input) => {
+  // 数字以外を取り除いて純粋な数値文字列を取得
+  const raw = input.value.replace(/[^0-9]/g, '');
+  // 空なら空にする。数字があればカンマ付きに変換
+  input.value = raw ? parseInt(raw, 10).toLocaleString('ja-JP') : '';
+};
+
+// カンマ付き文字列から数値を取り出すヘルパー
+function parseAmountVal(str) {
+  return parseInt(String(str).replace(/,/g, ''), 10) || 0;
+}
+
 // ====== 源泉徴収の計算 ======
 // 源泉率：10.21%（所得税10% + 復興特別所得税0.21%）
 let isWithholding = false;
@@ -1759,7 +1790,7 @@ window.toggleWithholding = () => {
 
 window.calcWithholding = () => {
   if (!isWithholding) return;
-  const received = parseInt(document.getElementById('entry-amount').value) || 0;
+  const received = parseAmountVal(document.getElementById('entry-amount').value);
   if (received <= 0) { document.getElementById('withholding-result').classList.remove('show'); return; }
   const gross  = Math.round(received / (1 - 0.1021));
   const tax    = gross - received;
