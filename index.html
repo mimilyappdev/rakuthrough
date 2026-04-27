@@ -553,7 +553,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
         <div id="gensen-help-wrap" style="margin-bottom:5px;">
         </div>
         <div class="amount-row">
-          <input class="form-input amount-input" type="number" id="entry-amount" placeholder="0" inputmode="numeric" oninput="calcWithholding()">
+          <input class="form-input amount-input" type="number" id="entry-amount" placeholder="0" inputmode="numeric" oninput="calcWithholding()" onkeydown="if(['e','E','+','-'].includes(event.key))event.preventDefault()">
           <button class="withholding-btn" id="withholding-btn" onclick="toggleWithholding()">源泉</button>
           <button class="tip-btn" onclick="toggleTip(this)" style="flex-shrink:0;">?<span class="tip-box">クライアントから支払われる前に税金（10.21%）が引かれる仕組みです。源泉徴収がある場合は「源泉」ボタンをオンにしてください。</span></button>
         </div>
@@ -1316,7 +1316,6 @@ window.setEntryStatus = (status) => {
 // 支払い方法
 window.setPayment = (method) => {
   currentPayment = method;
-  currentPaymentMethod = method; // 現在の支払い方法を保存
   const _pc = currentEntryType === 'expense' ? ' seg-on-red' : ' seg-on';
   document.getElementById('btn-cash').className = 'seg-btn' + (method === 'cash' ? _pc : '');
   document.getElementById('btn-card').className = 'seg-btn' + (method === 'card' ? _pc : '');
@@ -1327,7 +1326,7 @@ function initEntryForm() {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('entry-date').value = today;
   // setPaymentはcurrentEntryTypeを見て色を決めるので順番が重要
-  setPayment(currentPaymentMethod || 'cash');
+  setPayment(currentPayment || 'cash');
   renderCategoryGrid();
 }
 
@@ -1335,14 +1334,7 @@ function initEntryForm() {
 function renderCategoryGrid() {
   const grid = document.getElementById('category-grid');
   if (!grid) return;
-  // Firestoreの科目リストにDEFAULT_CATEGORIESの新科目をマージ
-  // （仕入高など後から追加した科目がFirestoreになくても表示される）
-  let src = DEFAULT_CATEGORIES;
-  if (categories && categories.length > 0) {
-    const existingIds = categories.map(c => c.id);
-    const newDefaults = DEFAULT_CATEGORIES.filter(c => !existingIds.includes(c.id));
-    src = [...categories, ...newDefaults];
-  }
+  const src = (categories && categories.length > 0) ? categories : DEFAULT_CATEGORIES;
   const filtered = src.filter(c => c.type === currentEntryType);
   grid.innerHTML = filtered.map(cat => {
     // アイコン：絵文字を優先。Material Iconsは Safari で動かないため使用しない
@@ -1359,14 +1351,7 @@ window.selectCategory = (id) => {
   selectedCategory = id;
   renderCategoryGrid();
   // 選択した科目の説明文を表示
-  // Firestoreの科目リストにDEFAULT_CATEGORIESの新科目をマージ
-  // （仕入高など後から追加した科目がFirestoreになくても表示される）
-  let src = DEFAULT_CATEGORIES;
-  if (categories && categories.length > 0) {
-    const existingIds = categories.map(c => c.id);
-    const newDefaults = DEFAULT_CATEGORIES.filter(c => !existingIds.includes(c.id));
-    src = [...categories, ...newDefaults];
-  }
+  const src = (categories && categories.length > 0) ? categories : DEFAULT_CATEGORIES;
   const cat = src.find(c => c.id === id);
   const box = document.getElementById('cat-desc-box');
   if (box && cat?.desc) {
@@ -1930,7 +1915,8 @@ function getTextColor(hex) {
 
 // アクセントカラーを適用する
 window.applyAccentColor = async (hex) => {
-  if (!window.isPremium) return;
+  // 個人利用フェーズのためisPremiumチェックを一時解除
+  // if (!window.isPremium) return;
   document.documentElement.style.setProperty('--accent', hex);
   const textColor = getTextColor(hex);
   // サマリーカード内テキストなど濃い背景上の文字色を調整
@@ -1956,7 +1942,9 @@ window.applyAccentColor = async (hex) => {
 
 // ログイン後にFirestoreから保存済みカラーを復元
 async function restoreAccentColor() {
-  if (!currentUser || !window.isPremium) return;
+  if (!currentUser) return;
+  // 個人利用フェーズのためisPremiumチェックを一時解除
+  // if (!window.isPremium) return;
   try {
     const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
     const snap = await getDoc(doc(db, 'users', currentUser.uid, 'settings', 'theme'));
@@ -2044,7 +2032,7 @@ window.showToast = (msg) => {
 window.setAssetYears = (years, label) => {
   document.getElementById('asset-years').value = years;
   document.querySelectorAll('.years-btn').forEach(b => {
-    b.classList.toggle('active', b.textContent.includes(label));
+    b.classList.toggle('active', b.textContent.trim().includes(label));
   });
   previewAsset();
 };
