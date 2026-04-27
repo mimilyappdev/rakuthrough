@@ -588,6 +588,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
         <label class="form-label">勘定科目</label>
 
         <div class="category-grid" id="category-grid"></div>
+        <div id="cat-desc-box" style="display:none; margin-top:8px; padding:9px 12px; background:var(--accent-light); border-radius:var(--radius-sm); font-size:11px; color:var(--ink2); line-height:1.7; white-space:pre-line;"></div>
       </div>
     </div>
 
@@ -942,21 +943,33 @@ const db   = getFirestore(app);
 // ★ 履歴の cat-dot に使用。入力フォームのボタンには色をつけない。
 // ============================================================
 const DEFAULT_CATEGORIES = [
-  // ===== 収入（Ver.9.0: 絵文字アイコン・カラー青系統一）=====
-  { id: 'sales',       name: '売上高', type: 'income',  emoji: '💴', color: '#1a56db' },
-  { id: 'misc-income', name: '雑収入', type: 'income',  emoji: '📈', color: '#0891b2' },
+  // ===== 収入 =====
+  { id: 'sales',       name: '売上高', type: 'income',  emoji: '💴', color: '#1a56db',
+    desc: 'イラスト制作・デザイン・VTuber活動など、事業のメインとなる売上。\n例：Skeb受注料、デザイン制作料、配信収益など' },
+  { id: 'misc-income', name: '雑収入', type: 'income',  emoji: '📈', color: '#0891b2',
+    desc: '売上高以外の収入。事業に付随する小さな収入が対象。\n例：投げ銭、アフィリエイト報酬、補助金など' },
 
-  // ===== 経費 =====
-  { id: 'outsource', name: '外注費',       type: 'expense', emoji: '👥', color: '#1a56db' },
-  { id: 'comm',      name: '通信費',       type: 'expense', emoji: '📱', color: '#1a56db' },
-  { id: 'utilities', name: '光熱費',       type: 'expense', emoji: '⚡', color: '#1a56db' },
-  { id: 'supplies',  name: '消耗品費',     type: 'expense', emoji: '🖊', color: '#6b6a64' },
-  { id: 'travel',    name: '旅費交通費',   type: 'expense', emoji: '🚃', color: '#1a56db' },
-  { id: 'books',     name: '書籍・研修費', type: 'expense', emoji: '📚', color: '#1a56db' },
-  { id: 'ads',       name: '広告宣伝費',   type: 'expense', emoji: '📣', color: '#1a56db' },
-  { id: 'meeting',   name: '会議費',       type: 'expense', emoji: '☕', color: '#6b6a64' },
-  { id: 'deprec',    name: '減価償却費',   type: 'expense', emoji: '💻', color: '#6b6a64' },
-  { id: 'other',     name: 'その他経費',   type: 'expense', emoji: '📋', color: '#6b6a64' },
+  // ===== 経費（出典：弥生会計公式・freee公式） =====
+  { id: 'outsource', name: '外注費',       type: 'expense', emoji: '👥', color: '#1a56db',
+    desc: '業務の一部を外部に委託した費用。（出典：弥生会計公式）\n例：イラスト依頼費、動画編集委託費、翻訳費など' },
+  { id: 'comm',      name: '通信費',       type: 'expense', emoji: '📱', color: '#1a56db',
+    desc: 'インターネット・クラウドサービスの利用料。（出典：弥生会計公式）\n例：Adobe CC、Canva Pro、ネット回線料、携帯代（按分）など' },
+  { id: 'utilities', name: '光熱費',       type: 'expense', emoji: '⚡', color: '#1a56db',
+    desc: '事業で使用した電気・ガス・水道代。自宅兼事務所の場合は按分が必要。\n例：電気代（作業部屋分）、灯油代など' },
+  { id: 'supplies',  name: '消耗品費',     type: 'expense', emoji: '🖊', color: '#6b6a64',
+    desc: '使用可能期間1年未満または10万円未満の備品・消耗品。（出典：弥生会計公式）\n例：画材、印刷用紙、USBメモリ、タブレットペン先など' },
+  { id: 'travel',    name: '旅費交通費',   type: 'expense', emoji: '🚃', color: '#1a56db',
+    desc: '事業に関連する交通費・宿泊費。（出典：弥生会計公式）\n例：コミケ・イベント遠征の電車賃、宿泊費、会場への交通費など' },
+  { id: 'books',     name: '書籍・研修費', type: 'expense', emoji: '📚', color: '#1a56db',
+    desc: '事業に必要な知識・スキル習得のための費用。電子書籍も対象。（出典：弥生会計公式）\n例：技術書、デザイン講座、オンラインセミナー参加費など' },
+  { id: 'ads',       name: '広告宣伝費',   type: 'expense', emoji: '📣', color: '#1a56db',
+    desc: '事業・商品・サービスを宣伝するための費用。（出典：弥生会計公式）\n例：Twitter/X広告、Skeb掲載料、Pixivファンボックス宣伝費など' },
+  { id: 'meeting',   name: '会議費',       type: 'expense', emoji: '☕', color: '#6b6a64',
+    desc: '打ち合わせ・商談に要した飲食・場所代などの費用。\n例：取引先とのカフェ代、打ち合わせ場所のレンタル費など' },
+  { id: 'deprec',    name: '減価償却費',   type: 'expense', emoji: '💻', color: '#6b6a64',
+    desc: '10万円以上の固定資産を耐用年数で分割して経費にしたもの。固定資産登録から自動計算されます。\n例：PC・タブレット・カメラなどの年間償却額' },
+  { id: 'other',     name: 'その他経費',   type: 'expense', emoji: '📋', color: '#6b6a64',
+    desc: '上記のどれにも当てはまらない事業経費。頻繁に使う場合は専用科目の追加を検討してください。\n例：振込手数料、事業用の雑費など' },
 ];
 
 // ====== アプリ状態 ======
@@ -1232,6 +1245,9 @@ window.setEntryType = (type) => {
   const gh = document.getElementById('gensen-help-wrap');
   if (gh) gh.style.display = type === 'income' ? '' : 'none';
   selectedCategory = null;
+  // 科目説明文をリセット
+  const descBox = document.getElementById('cat-desc-box');
+  if (descBox) descBox.style.display = 'none';
   initEntryForm();
   // 支払い・口座のseg-btnを収入=青・経費=赤に切り替え
   const expenseMode = (type === 'expense');
@@ -1304,6 +1320,16 @@ function renderCategoryGrid() {
 window.selectCategory = (id) => {
   selectedCategory = id;
   renderCategoryGrid();
+  // 選択した科目の説明文を表示
+  const src = (categories && categories.length > 0) ? categories : DEFAULT_CATEGORIES;
+  const cat = src.find(c => c.id === id);
+  const box = document.getElementById('cat-desc-box');
+  if (box && cat?.desc) {
+    box.textContent = cat.desc;
+    box.style.display = 'block';
+  } else if (box) {
+    box.style.display = 'none';
+  }
 };
 
 // ====== 取引の保存（Ver.7.0: 新フィールド追加）======
