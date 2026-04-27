@@ -397,6 +397,32 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 }
 .tip-btn.tip-open .tip-box { display: block; }
 
+/* ===== 勘定科目説明文（画面下部固定・スクロール不要） ===== */
+#cat-desc-box {
+  display: none;
+  position: fixed;
+  bottom: 68px; /* タブバーの高さ分上げる */
+  left: 0; right: 0;
+  margin: 0 12px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1.5px solid var(--accent-light);
+  border-radius: var(--radius);
+  font-size: 11px;
+  color: var(--ink2);
+  line-height: 1.7;
+  white-space: pre-line;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+  z-index: 50;
+  animation: slideUp 0.18s ease;
+}
+#cat-desc-box.expense-mode {
+  border-color: var(--red-light);
+}
+@keyframes slideUp {
+  from { opacity:0; transform: translateY(8px); }
+  to   { opacity:1; transform: translateY(0); }
+}
 </style>
 </head>
 <body data-theme="default">
@@ -588,10 +614,12 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
         <label class="form-label">勘定科目</label>
 
         <div class="category-grid" id="category-grid"></div>
-        <div id="cat-desc-box" style="display:none; margin-top:8px; padding:9px 12px; background:var(--accent-light); border-radius:var(--radius-sm); font-size:11px; color:var(--ink2); line-height:1.7; white-space:pre-line;"></div>
+
       </div>
     </div>
 
+    <!-- 勘定科目説明文（画面下部固定） -->
+    <div id="cat-desc-box"></div>
     <button class="submit-btn" onclick="submitEntry()">記録する</button>
   </div>
 
@@ -670,7 +698,8 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
       <div class="accordion-body">
       <div style="padding:4px 0 0">
         <p style="font-size:12px;color:var(--ink2);margin-bottom:14px;line-height:1.6">
-          Boothグッズなどの在庫がある場合に入力。<br>
+          「仕入高」科目で記録した費用はここで棚卸し精算します。<br>
+          在庫が残る場合は期末在庫を入力して売上原価を確定してください。<br>
           <b>売上原価 ＝ 期首 ＋ 仕入 − 期末</b>
         </p>
         <div style="display:grid;gap:10px">
@@ -924,7 +953,7 @@ import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, order
 
 // ====== Firebase設定（変更禁止） ======
 const firebaseConfig = {
-  apiKey:            "AIzaSyDAgU1hp2-ay14x-8LcCSAIw_QU-u4xgdk",
+  apiKey:            "AIzaSyBj6Eup01CE1f0jqimiYzgKQHl7IXvO42g",
   authDomain:        "blue-tax-app.firebaseapp.com",
   projectId:         "blue-tax-app",
   storageBucket:     "blue-tax-app.firebasestorage.app",
@@ -949,21 +978,23 @@ const DEFAULT_CATEGORIES = [
   { id: 'misc-income', name: '雑収入', type: 'income',  emoji: '📈', color: '#0891b2',
     desc: '売上高以外の収入。事業に付随する小さな収入が対象。\n例：投げ銭、アフィリエイト報酬、補助金など' },
 
-  // ===== 経費（出典：弥生会計公式・freee公式） =====
+  // ===== 経費 =====
+  { id: 'purchase',  name: '仕入高',       type: 'expense', emoji: '🛍️', color: '#1a56db',
+    desc: '同人誌・グッズの印刷費・製造費。在庫が残る場合は棚卸しと連動します。\n設定画面から期末在庫を入力してください。\n例：同人誌印刷費、アクリルグッズ製造費など' },
   { id: 'outsource', name: '外注費',       type: 'expense', emoji: '👥', color: '#1a56db',
-    desc: '業務の一部を外部に委託した費用。（出典：弥生会計公式）\n例：イラスト依頼費、動画編集委託費、翻訳費など' },
+    desc: '業務の一部を外部に委託した費用。例：イラスト依頼費、動画編集委託費、翻訳費など' },
   { id: 'comm',      name: '通信費',       type: 'expense', emoji: '📱', color: '#1a56db',
-    desc: 'インターネット・クラウドサービスの利用料。（出典：弥生会計公式）\n例：Adobe CC、Canva Pro、ネット回線料、携帯代（按分）など' },
+    desc: 'インターネット・クラウドサービスの利用料。例：Adobe CC、Canva Pro、ネット回線料、携帯代（按分）など' },
   { id: 'utilities', name: '光熱費',       type: 'expense', emoji: '⚡', color: '#1a56db',
     desc: '事業で使用した電気・ガス・水道代。自宅兼事務所の場合は按分が必要。\n例：電気代（作業部屋分）、灯油代など' },
   { id: 'supplies',  name: '消耗品費',     type: 'expense', emoji: '🖊', color: '#6b6a64',
-    desc: '使用可能期間1年未満または10万円未満の備品・消耗品。（出典：弥生会計公式）\n例：画材、印刷用紙、USBメモリ、タブレットペン先など' },
+    desc: '使用可能期間1年未満または10万円未満の備品・消耗品。例：画材、印刷用紙、USBメモリ、タブレットペン先など' },
   { id: 'travel',    name: '旅費交通費',   type: 'expense', emoji: '🚃', color: '#1a56db',
-    desc: '事業に関連する交通費・宿泊費。（出典：弥生会計公式）\n例：コミケ・イベント遠征の電車賃、宿泊費、会場への交通費など' },
+    desc: '事業に関連する交通費・宿泊費。例：コミケ・イベント遠征の電車賃、宿泊費、会場への交通費など' },
   { id: 'books',     name: '書籍・研修費', type: 'expense', emoji: '📚', color: '#1a56db',
-    desc: '事業に必要な知識・スキル習得のための費用。電子書籍も対象。（出典：弥生会計公式）\n例：技術書、デザイン講座、オンラインセミナー参加費など' },
+    desc: '事業に必要な知識・スキル習得のための費用。電子書籍も対象。例：技術書、デザイン講座、オンラインセミナー参加費など' },
   { id: 'ads',       name: '広告宣伝費',   type: 'expense', emoji: '📣', color: '#1a56db',
-    desc: '事業・商品・サービスを宣伝するための費用。（出典：弥生会計公式）\n例：Twitter/X広告、Skeb掲載料、Pixivファンボックス宣伝費など' },
+    desc: '事業・商品・サービスを宣伝するための費用。例：Twitter/X広告、Skeb掲載料、Pixivファンボックス宣伝費など' },
   { id: 'meeting',   name: '会議費',       type: 'expense', emoji: '☕', color: '#6b6a64',
     desc: '打ち合わせ・商談に要した飲食・場所代などの費用。\n例：取引先とのカフェ代、打ち合わせ場所のレンタル費など' },
   { id: 'deprec',    name: '減価償却費',   type: 'expense', emoji: '💻', color: '#6b6a64',
@@ -1305,11 +1336,9 @@ function renderCategoryGrid() {
   const src = (categories && categories.length > 0) ? categories : DEFAULT_CATEGORIES;
   const filtered = src.filter(c => c.type === currentEntryType);
   grid.innerHTML = filtered.map(cat => {
-    const icon = cat.icon || cat.emoji || 'label';
-    const isEmoji = icon.length > 2; // 絵文字かMaterial Iconかの判定
-    const iconHtml = isEmoji
-      ? `<span style="font-size:13px;">${icon}</span>`
-      : `<span class="material-icons" style="font-size:14px;vertical-align:-2px;">${icon}</span>`;
+    // アイコン：絵文字を優先。Material Iconsは Safari で動かないため使用しない
+    const icon = cat.emoji || cat.icon || '📋';
+    const iconHtml = `<span style="font-size:14px;line-height:1;">${icon}</span>`;
     const sel = selectedCategory === cat.id;
     return `<button class="cat-btn${sel ? ' selected' : ''}"
        style="${sel ? 'background:var(--accent);color:#fff;border-color:var(--accent);' : ''}"
@@ -1327,6 +1356,8 @@ window.selectCategory = (id) => {
   if (box && cat?.desc) {
     box.textContent = cat.desc;
     box.style.display = 'block';
+    // 経費モードは赤border
+    box.classList.toggle('expense-mode', currentEntryType === 'expense');
   } else if (box) {
     box.style.display = 'none';
   }
