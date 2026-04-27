@@ -551,11 +551,11 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
         <label class="form-label">金額（円）</label>
         <!-- 源泉説明：源泉ボタンの上に配置・収入タブのみ表示 -->
         <div id="gensen-help-wrap" style="margin-bottom:5px;">
-          <button class="tip-btn" onclick="toggleTip(this)">? 源泉徴収とは<span class="tip-box">クライアントから支払われる前に税金（10.21%）が引かれる仕組みです。請求書に源泉徴収がある場合は「源泉」ボタンをオンにしてください。</span></button>
         </div>
         <div class="amount-row">
           <input class="form-input amount-input" type="number" id="entry-amount" placeholder="0" inputmode="numeric" oninput="calcWithholding()">
           <button class="withholding-btn" id="withholding-btn" onclick="toggleWithholding()">源泉</button>
+          <button class="tip-btn" onclick="toggleTip(this)" style="flex-shrink:0;">?<span class="tip-box">クライアントから支払われる前に税金（10.21%）が引かれる仕組みです。源泉徴収がある場合は「源泉」ボタンをオンにしてください。</span></button>
         </div>
         <div class="withholding-result" id="withholding-result"></div>
       </div>
@@ -748,7 +748,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
                 <button class="years-btn" onclick="setAssetYears(4,'スマホ')">スマホ 4年</button>
                 <button class="years-btn" onclick="setAssetYears(5,'ソフト')">ソフト 5年</button>
                 <button class="years-btn" onclick="setAssetYears(5,'カメラ')">カメラ 5年</button>
-                <button class="years-btn" onclick="setAssetYears(8,'デスク・椅子')">机・椅子 8年</button>
+                <button class="years-btn" onclick="setAssetYears(8,'机・椅子')">机・椅子 8年</button>
               </div>
               <input class="form-input" type="number" id="asset-years" placeholder="年数を入力" inputmode="numeric" style="margin-top:6px;max-width:140px" oninput="previewAsset()">
             </div>
@@ -1316,6 +1316,7 @@ window.setEntryStatus = (status) => {
 // 支払い方法
 window.setPayment = (method) => {
   currentPayment = method;
+  currentPaymentMethod = method; // 現在の支払い方法を保存
   const _pc = currentEntryType === 'expense' ? ' seg-on-red' : ' seg-on';
   document.getElementById('btn-cash').className = 'seg-btn' + (method === 'cash' ? _pc : '');
   document.getElementById('btn-card').className = 'seg-btn' + (method === 'card' ? _pc : '');
@@ -1325,7 +1326,8 @@ window.setPayment = (method) => {
 function initEntryForm() {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('entry-date').value = today;
-  setPayment('cash');
+  // setPaymentはcurrentEntryTypeを見て色を決めるので順番が重要
+  setPayment(currentPaymentMethod || 'cash');
   renderCategoryGrid();
 }
 
@@ -1333,7 +1335,14 @@ function initEntryForm() {
 function renderCategoryGrid() {
   const grid = document.getElementById('category-grid');
   if (!grid) return;
-  const src = (categories && categories.length > 0) ? categories : DEFAULT_CATEGORIES;
+  // Firestoreの科目リストにDEFAULT_CATEGORIESの新科目をマージ
+  // （仕入高など後から追加した科目がFirestoreになくても表示される）
+  let src = DEFAULT_CATEGORIES;
+  if (categories && categories.length > 0) {
+    const existingIds = categories.map(c => c.id);
+    const newDefaults = DEFAULT_CATEGORIES.filter(c => !existingIds.includes(c.id));
+    src = [...categories, ...newDefaults];
+  }
   const filtered = src.filter(c => c.type === currentEntryType);
   grid.innerHTML = filtered.map(cat => {
     // アイコン：絵文字を優先。Material Iconsは Safari で動かないため使用しない
@@ -1350,7 +1359,14 @@ window.selectCategory = (id) => {
   selectedCategory = id;
   renderCategoryGrid();
   // 選択した科目の説明文を表示
-  const src = (categories && categories.length > 0) ? categories : DEFAULT_CATEGORIES;
+  // Firestoreの科目リストにDEFAULT_CATEGORIESの新科目をマージ
+  // （仕入高など後から追加した科目がFirestoreになくても表示される）
+  let src = DEFAULT_CATEGORIES;
+  if (categories && categories.length > 0) {
+    const existingIds = categories.map(c => c.id);
+    const newDefaults = DEFAULT_CATEGORIES.filter(c => !existingIds.includes(c.id));
+    src = [...categories, ...newDefaults];
+  }
   const cat = src.find(c => c.id === id);
   const box = document.getElementById('cat-desc-box');
   if (box && cat?.desc) {
