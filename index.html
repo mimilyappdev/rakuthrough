@@ -4,6 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>RakuThrough — ラクスルー</title>
+
+<!-- ============================================================
+     PWA設定（ホーム画面追加でURLバーを消す）
+     iPhoneのSafariで「共有→ホーム画面に追加」するとスタンドアロンアプリになる
+     ============================================================ -->
+<!-- iOS Safari用（これだけでiPhoneのホーム画面追加が有効になる） -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ラクスルー">
+<!-- iOS用アイコン（SVGをbase64で埋め込み・外部ファイル不要） -->
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIHJ4PSI0MCIgZmlsbD0iIzFhNTZkYiIvPjxwYXRoIGQ9Ik01NiAxNDRWODBsNDAtMjAgNDAgMjB2NjRsLTQwIDIwLTQwLTIweiIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI5IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTk2IDYwdjgwTTU2IDgwbDQwIDIwIDQwLTIwIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjkiLz48L3N2Zz4=">
+<!-- テーマカラー（ブラウザのアドレスバーの色） -->
+<meta name="theme-color" content="#1a56db">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@900&family=Zen+Maru+Gothic:wght@400;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
@@ -109,7 +122,7 @@ body {
 .tab-item.active .tab-label { color: var(--accent); }
 .tab-item.active .tab-icon { transform: scale(1.1); }
 
-.page { display: none; padding: 20px; animation: fadeUp 0.2s ease; }
+.page { display: none; padding: 14px; animation: fadeUp 0.2s ease; }
 .page.active { display: block; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -183,19 +196,19 @@ body {
 .card-summary-amount { font-size: 20px; font-weight: 600; font-family: var(--mono); color: var(--amber); }
 
 /* ===== 入力フォーム ===== */
-.type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
-.type-btn { padding: 12px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface); cursor: pointer; font-size: 14px; font-weight: 500; color: var(--ink2); transition: all 0.15s; font-family: 'Noto Sans JP', sans-serif; }
+.type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.type-btn { padding: 9px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface); cursor: pointer; font-size: 14px; font-weight: 500; color: var(--ink2); transition: all 0.15s; font-family: 'Noto Sans JP', sans-serif; }
 .type-btn.active-income { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
 .type-btn.active-expense { border-color: var(--red); background: var(--red-light); color: var(--red); }
 
-.form-card { background: var(--surface); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
-.form-group { margin-bottom: 10px; }
-.form-label { font-size: 11px; font-weight: 500; color: var(--ink2); margin-bottom: 4px; display: block; }
-.form-input { width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 0.875rem; font-family: 'Noto Sans JP', sans-serif; color: var(--ink); background: var(--bg); outline: none; transition: border-color 0.15s; box-sizing: border-box; min-width: 0; }
+.form-card { background: var(--surface); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 8px; }
+.form-group { margin-bottom: 6px; }
+.form-label { font-size: 11px; font-weight: 500; color: var(--ink2); margin-bottom: 2px; display: block; }
+.form-input { width: 100%; padding: 7px 10px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 0.875rem; font-family: 'Noto Sans JP', sans-serif; color: var(--ink); background: var(--bg); outline: none; transition: border-color 0.15s; box-sizing: border-box; min-width: 0; }
 .form-input:focus { border-color: var(--accent); background: var(--surface); }
 .amount-input { font-family: var(--mono); font-size: 1.25rem; font-weight: 600; }
 /* 摘要・メモ横並び（2:1）。日付は単独行でiOS問題を回避 */
-.form-row { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-bottom: 10px; }
+.form-row { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-bottom: 6px; }
 .form-row .form-group { margin-bottom: 0; }
 /* iOSのdate inputをリセット */
 input[type="date"] { -webkit-appearance: none; appearance: none; max-width: 200px; }
@@ -234,7 +247,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .payment-btn.active-card { border-color: var(--amber); background: var(--amber-light); color: var(--amber); }
 .payment-btn.active-cash { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
 
-.submit-btn { width: 100%; padding: 16px; border-radius: var(--radius); background: var(--accent); color: white; border: none; font-size: 16px; font-weight: 700; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; transition: opacity 0.15s, transform 0.1s; }
+.submit-btn { width: 100%; padding: 12px; border-radius: var(--radius); background: var(--accent); color: white; border: none; font-size: 16px; font-weight: 700; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; transition: opacity 0.15s, transform 0.1s; }
 .submit-btn:active { opacity: 0.85; transform: scale(0.99); }
 .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -340,10 +353,10 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 }
 .seg-btn {
   flex: 1;
-  padding: 10px 8px;
+  padding: 7px 8px;
   border: none; border-radius: 8px;
   background: transparent;
-  font-size: 15px; font-weight: 700;
+  font-size: 14px; font-weight: 700;
   color: var(--ink2); cursor: pointer;
   font-family: inherit;
   transition: all 0.15s;
@@ -351,7 +364,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   align-items: center; gap: 2px;
   line-height: 1.3;
 }
-.seg-btn .seg-main { font-size: 15px; font-weight: 700; }
+.seg-btn .seg-main { font-size: 14px; font-weight: 700; }
 .seg-btn .seg-sub  { font-size: 10px; color: var(--ink3); font-weight: 400; }
 .seg-btn.seg-on {
   background: var(--accent-light);
@@ -929,6 +942,41 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- ============================================================
+     PWA: Androidおよびデスクトップ用マニフェスト（動的生成）
+     iOSはapple-mobile-web-app-capableメタタグで対応済み。
+     AndroidのChromeでは manifest.json が必要なため blob URL で生成する。
+     ============================================================ -->
+<script>
+(function() {
+  // SVGアイコン（base64）をそのままアイコンとして使用
+  const iconSvg = `<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="192" height="192" rx="40" fill="#1a56db"/><path d="M56 144V80l40-20 40 20v64l-40 20-40-20z" stroke="white" stroke-width="9" fill="none"/><path d="M96 60v80M56 80l40 20 40-20" stroke="white" stroke-width="9"/></svg>`;
+  const iconBlob = new Blob([iconSvg], {type: 'image/svg+xml'});
+  const iconUrl  = URL.createObjectURL(iconBlob);
+
+  // マニフェストを動的生成してlinkタグに注入
+  const manifest = {
+    name:             'RakuThrough',
+    short_name:       'ラクスルー',
+    description:      '青色申告対応の収支管理アプリ',
+    start_url:        './',
+    display:          'standalone',         // ← URLバーを消すキー設定
+    background_color: '#f5f4f0',
+    theme_color:      '#1a56db',
+    lang:             'ja',
+    icons: [
+      { src: iconUrl, sizes: '192x192', type: 'image/svg+xml' },
+      { src: iconUrl, sizes: '512x512', type: 'image/svg+xml' }
+    ]
+  };
+  const blob = new Blob([JSON.stringify(manifest)], {type: 'application/manifest+json'});
+  const link = document.createElement('link');
+  link.rel   = 'manifest';
+  link.href  = URL.createObjectURL(blob);
+  document.head.appendChild(link);
+})();
+</script>
 
 <!-- ============================================================
      Firebase SDK（モジュール形式）
