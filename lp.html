@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RakuThrough（ラクスルー） — 創作活動するあなたの確定申告をラクに</title>
+<meta name="description" content="同人作家・VTuber・フリーランスクリエイター向けの青色申告対応 収支管理アプリ。面倒な帳簿づけをスルーして、創作の時間を取り戻そう。">
+<meta property="og:title" content="RakuThrough — 創作活動するあなたにラクスルー！">
+<meta property="og:description" content="同人作家・VTuber・クリエイター向けの青色申告対応 収支管理Webアプリ">
+<meta property="og:type" content="website">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&family=Zen+Maru+Gothic:wght@400;700&family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+<style>
+/* ============================================================
+   CSS変数・リセット
+   ============================================================ */
+:root {
+  --navy: #0f2d6b;
+  --blue: #1a56db;
+  --blue-mid: #2563eb;
+  --blue-light: #dbeafe;
+  --cream: #f5f4f0;
+  --white: #ffffff;
+  --ink: #1a1a18;
+  --ink2: #4a4a46;
+  --ink3: #9a9a94;
+  --red: #c0392b;
+  --green: #15803d;
+  --amber: #b8860b;
+  --border: rgba(0,0,0,0.09);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 4px 24px rgba(15,45,107,0.12);
+  --shadow-lg: 0 12px 48px rgba(15,45,107,0.18);
+}
+
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Noto Sans JP', sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  overflow-x: hidden;
+  line-height: 1.7;
+}
+
+/* ============================================================
+   ユーティリティ
+   ============================================================ */
+.container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+.section { padding: 96px 0; }
+.section-sm { padding: 64px 0; }
+
+/* フェードイン アニメーション */
+.fade-up {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.7s cubic-bezier(0.22,1,0.36,1), transform 0.7s cubic-bezier(0.22,1,0.36,1);
+}
+.fade-up.visible { opacity: 1; transform: translateY(0); }
+.delay-1 { transition-delay: 0.1s; }
+.delay-2 { transition-delay: 0.2s; }
+.delay-3 { transition-delay: 0.3s; }
+.delay-4 { transition-delay: 0.4s; }
+.delay-5 { transition-delay: 0.5s; }
+
+/* ============================================================
+   ナビバー
+   ============================================================ */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(245,244,240,0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 0;
+  transition: box-shadow 0.2s;
+}
+.nav.scrolled { box-shadow: 0 2px 20px rgba(0,0,0,0.08); }
+.nav-inner { display: flex; align-items: center; justify-content: space-between; max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+.logo-wrap { display: flex; flex-direction: column; line-height: 1; gap: 1px; text-decoration: none; }
+.logo-en {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900;
+  font-size: 20px;
+  color: var(--blue);
+  letter-spacing: -0.02em;
+}
+.logo-ja {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-weight: 700;
+  font-size: 10px;
+  color: var(--ink3);
+  letter-spacing: 0.05em;
+}
+.nav-cta {
+  background: var(--blue);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  padding: 9px 22px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: 'Noto Sans JP', sans-serif;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: background 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.nav-cta:hover { background: var(--navy); transform: scale(1.03); }
+
+/* ============================================================
+   ヒーローセクション
+   ============================================================ */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  padding: 120px 0 80px;
+  background: var(--cream);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 背景の装飾円 */
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -200px; right: -200px;
+  width: 700px; height: 700px;
+  background: radial-gradient(circle, rgba(26,86,219,0.08) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: -150px; left: -150px;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(15,45,107,0.06) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.hero-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ヒーロー：テキスト側 */
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--blue-light);
+  color: var(--blue);
+  padding: 6px 14px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 24px;
+  letter-spacing: 0.05em;
+}
+.hero-eyebrow-dot {
+  width: 7px; height: 7px;
+  background: var(--blue);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%,100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.6; }
+}
+
+.hero-title {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-weight: 700;
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.35;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.hero-title .accent { color: var(--blue); position: relative; }
+.hero-title .accent::after {
+  content: '';
+  position: absolute;
+  bottom: 2px; left: 0; right: 0;
+  height: 4px;
+  background: var(--blue);
+  border-radius: 2px;
+  opacity: 0.25;
+}
+
+.hero-catchcopy {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900;
+  font-size: clamp(20px, 3vw, 30px);
+  color: var(--blue);
+  margin-bottom: 24px;
+  letter-spacing: -0.01em;
+}
+
+.hero-desc {
+  font-size: 15px;
+  color: var(--ink2);
+  margin-bottom: 36px;
+  line-height: 1.85;
+}
+
+.hero-btns { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 36px; }
+.btn-primary {
+  background: var(--blue);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  padding: 15px 32px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: 'Noto Sans JP', sans-serif;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  box-shadow: 0 4px 20px rgba(26,86,219,0.35);
+  transition: all 0.2s;
+}
+.btn-primary:hover { background: var(--navy); transform: translateY(-2px); box-shadow: 0 8px 28px rgba(26,86,219,0.4); }
+.btn-secondary {
+  background: transparent;
+  color: var(--blue);
+  border: 1.5px solid rgba(26,86,219,0.4);
+  border-radius: 50px;
+  padding: 15px 28px;
+  font-size: 15px;
+  font-weight: 500;
+  font-family: 'Noto Sans JP', sans-serif;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.2s;
+}
+.btn-secondary:hover { border-color: var(--blue); background: var(--blue-light); }
+
+.hero-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+.hero-tag {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 50px;
+  padding: 5px 13px;
+  font-size: 12px;
+  color: var(--ink2);
+}
+
+/* ヒーロー：スマホモックアップ側 */
+.hero-visual { display: flex; justify-content: center; align-items: center; position: relative; }
+
+.phone-frame {
+  width: 280px;
+  background: var(--ink);
+  border-radius: 44px;
+  padding: 14px;
+  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255,255,255,0.06);
+  position: relative;
+  animation: float 5s ease-in-out infinite;
+}
+@keyframes float {
+  0%,100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-14px) rotate(1deg); }
+}
+
+.phone-notch {
+  width: 90px; height: 26px;
+  background: var(--ink);
+  border-radius: 0 0 18px 18px;
+  margin: 0 auto 10px;
+  position: relative; z-index: 2;
+}
+
+.phone-screen {
+  background: #f5f4f0;
+  border-radius: 32px;
+  overflow: hidden;
+  font-family: 'Noto Sans JP', sans-serif;
+}
+
+/* アプリUI（モックアップ内） */
+.mock-header {
+  background: white;
+  padding: 12px 16px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0,0,0,0.07);
+}
+.mock-logo-wrap { display: flex; align-items: center; gap: 6px; }
+.mock-logo-icon {
+  width: 26px; height: 26px;
+  background: var(--blue);
+  border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+}
+.mock-logo-text { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 13px; color: var(--blue); }
+.mock-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--blue-light); font-size: 10px; font-weight: 700; color: var(--blue); display: flex; align-items: center; justify-content: center; }
+
+.mock-body { padding: 12px; }
+.mock-month { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.mock-month-label { font-size: 12px; font-weight: 700; color: var(--ink); font-family: 'DM Mono', monospace; }
+.mock-month-btn { width: 22px; height: 22px; border-radius: 50%; background: white; border: 1px solid rgba(0,0,0,0.1); font-size: 11px; color: var(--ink3); display: flex; align-items: center; justify-content: center; }
+
+.mock-summary {
+  background: var(--blue);
+  border-radius: 12px;
+  padding: 14px;
+  color: white;
+  margin-bottom: 10px;
+}
+.mock-summary-label { font-size: 9px; opacity: 0.7; margin-bottom: 3px; }
+.mock-summary-amount { font-size: 22px; font-weight: 700; margin-bottom: 10px; font-family: 'DM Mono', 'Noto Sans JP', monospace; }
+.mock-summary-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mock-summary-sub { background: rgba(255,255,255,0.14); border-radius: 8px; padding: 8px 10px; }
+.mock-summary-sub-label { font-size: 8px; opacity: 0.7; }
+.mock-summary-sub-amount { font-size: 13px; font-weight: 600; }
+
+.mock-tx-label { font-size: 9px; color: var(--ink3); margin-bottom: 7px; font-weight: 500; }
+.mock-tx { background: white; border-radius: 8px; padding: 8px 10px; display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.mock-tx-icon { width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+.mock-tx-icon.income { background: #dbeafe; }
+.mock-tx-icon.expense { background: #fdf0ee; }
+.mock-tx-body { flex: 1; min-width: 0; }
+.mock-tx-desc { font-size: 10px; font-weight: 500; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mock-tx-meta { font-size: 8px; color: var(--ink3); }
+.mock-tx-amount { font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.mock-tx-amount.income { color: var(--blue); }
+.mock-tx-amount.expense { color: var(--red); }
+
+.mock-tabbar {
+  background: white;
+  border-top: 1px solid rgba(0,0,0,0.07);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 6px 0 10px;
+}
+.mock-tab { display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 8px; color: var(--ink3); padding: 2px; }
+.mock-tab.active { color: var(--blue); }
+.mock-tab-icon { font-size: 14px; }
+
+/* フローティングバッジ（モックアップの外側）*/
+.badge-float {
+  position: absolute;
+  background: white;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.badge-float-1 { top: 40px; right: -60px; animation: floatB1 4s ease-in-out infinite; }
+.badge-float-2 { bottom: 80px; left: -60px; animation: floatB2 4.5s ease-in-out infinite; }
+@keyframes floatB1 { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes floatB2 { 0%,100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
+.badge-icon { font-size: 18px; }
+
+/* ============================================================
+   特徴セクション（Features）
+   ============================================================ */
+.features { background: white; }
+.section-header { text-align: center; margin-bottom: 60px; }
+.section-eyebrow {
+  display: inline-block;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.section-title {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: clamp(24px, 3.5vw, 36px);
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.4;
+  margin-bottom: 16px;
+}
+.section-desc { font-size: 15px; color: var(--ink2); max-width: 560px; margin: 0 auto; line-height: 1.9; }
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+.feature-card {
+  background: var(--cream);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  border: 1px solid var(--border);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.feature-card:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+
+.feature-icon {
+  width: 52px; height: 52px;
+  background: var(--blue-light);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+.feature-title {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+.feature-desc { font-size: 13.5px; color: var(--ink2); line-height: 1.85; }
+.feature-tag {
+  display: inline-block;
+  background: var(--blue);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 50px;
+  margin-top: 14px;
+}
+
+/* ============================================================
+   使い方セクション（How it works）
+   ============================================================ */
+.howto { background: var(--cream); }
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; position: relative; }
+.steps::before {
+  content: '';
+  position: absolute;
+  top: 36px; left: calc(16.6% + 24px); right: calc(16.6% + 24px);
+  height: 2px;
+  background: repeating-linear-gradient(90deg, var(--blue) 0, var(--blue) 8px, transparent 8px, transparent 16px);
+  pointer-events: none;
+}
+.step { text-align: center; }
+.step-num {
+  width: 72px; height: 72px;
+  background: var(--blue);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900;
+  font-size: 26px;
+  color: white;
+  margin: 0 auto 20px;
+  box-shadow: 0 4px 16px rgba(26,86,219,0.35);
+}
+.step-title {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+.step-desc { font-size: 13px; color: var(--ink2); line-height: 1.85; }
+
+/* ============================================================
+   ターゲットセクション（こんな方に）
+   ============================================================ */
+.target { background: var(--navy); color: white; }
+.target .section-title { color: white; }
+.target .section-desc { color: rgba(255,255,255,0.65); }
+.target .section-eyebrow { color: rgba(255,255,255,0.5); }
+
+.target-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+.target-card {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  transition: background 0.2s;
+}
+.target-card:hover { background: rgba(255,255,255,0.12); }
+.target-emoji { font-size: 32px; flex-shrink: 0; }
+.target-title { font-family: 'Zen Maru Gothic', sans-serif; font-weight: 700; font-size: 16px; margin-bottom: 6px; }
+.target-desc { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.7; }
+
+/* ============================================================
+   料金セクション（Pricing）
+   ============================================================ */
+.pricing { background: white; }
+.pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 680px; margin: 0 auto; }
+
+.plan-card {
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px 28px;
+  text-align: center;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.plan-card:hover { transform: translateY(-4px); }
+.plan-card.featured {
+  border-color: var(--blue);
+  background: var(--navy);
+  color: white;
+  box-shadow: var(--shadow-lg);
+  position: relative;
+}
+.plan-badge {
+  position: absolute;
+  top: -14px; left: 50%; transform: translateX(-50%);
+  background: var(--blue);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 16px;
+  border-radius: 50px;
+  white-space: nowrap;
+}
+.plan-name {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+.plan-price-wrap { margin-bottom: 24px; }
+.plan-price {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 900;
+  font-size: 44px;
+  color: var(--blue);
+  line-height: 1;
+}
+.plan-card.featured .plan-price { color: white; }
+.plan-price-unit { font-size: 14px; font-weight: 400; color: var(--ink2); }
+.plan-card.featured .plan-price-unit { color: rgba(255,255,255,0.6); }
+.plan-saving { font-size: 12px; color: var(--green); font-weight: 700; margin-top: 6px; }
+.plan-card.featured .plan-saving { color: #6ee7b7; }
+
+.plan-features { list-style: none; margin-bottom: 28px; text-align: left; }
+.plan-features li {
+  font-size: 13px;
+  color: var(--ink2);
+  padding: 6px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.plan-card.featured .plan-features li { color: rgba(255,255,255,0.7); border-color: rgba(255,255,255,0.1); }
+.plan-features li::before { content: '✓'; color: var(--blue); font-weight: 700; flex-shrink: 0; }
+.plan-card.featured .plan-features li::before { color: #6ee7b7; }
+
+.plan-btn {
+  width: 100%;
+  padding: 13px;
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: 'Noto Sans JP', sans-serif;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+  display: block;
+  transition: all 0.2s;
+}
+.plan-btn-outline {
+  background: transparent;
+  border: 1.5px solid var(--border);
+  color: var(--ink);
+}
+.plan-btn-outline:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+.plan-btn-fill {
+  background: var(--blue);
+  color: white;
+  box-shadow: 0 4px 20px rgba(26,86,219,0.4);
+}
+.plan-btn-fill:hover { background: #2563eb; transform: scale(1.02); }
+
+.pricing-note { text-align: center; margin-top: 24px; font-size: 12px; color: var(--ink3); }
+
+/* ============================================================
+   よくある質問（FAQ）
+   ============================================================ */
+.faq { background: var(--cream); }
+.faq-list { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+.faq-item {
+  background: white;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.faq-q {
+  padding: 18px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  user-select: none;
+}
+.faq-q::after { content: '＋'; font-size: 18px; color: var(--blue); font-weight: 700; flex-shrink: 0; transition: transform 0.2s; }
+.faq-item.open .faq-q::after { transform: rotate(45deg); }
+.faq-a {
+  padding: 0 24px;
+  font-size: 13.5px;
+  color: var(--ink2);
+  line-height: 1.85;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.22,1,0.36,1), padding 0.35s;
+}
+.faq-item.open .faq-a { max-height: 300px; padding: 4px 24px 20px; }
+
+/* ============================================================
+   CTAセクション（最終）
+   ============================================================ */
+.cta-section {
+  background: var(--navy);
+  padding: 96px 0;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.cta-section::before {
+  content: '';
+  position: absolute;
+  top: -200px; left: 50%; transform: translateX(-50%);
+  width: 800px; height: 800px;
+  background: radial-gradient(circle, rgba(26,86,219,0.35) 0%, transparent 60%);
+  pointer-events: none;
+}
+.cta-title {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: clamp(24px, 4vw, 40px);
+  font-weight: 700;
+  color: white;
+  margin-bottom: 16px;
+  position: relative;
+}
+.cta-desc { font-size: 15px; color: rgba(255,255,255,0.65); margin-bottom: 40px; position: relative; }
+.cta-btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; position: relative; }
+.btn-white {
+  background: white;
+  color: var(--navy);
+  border: none;
+  border-radius: 50px;
+  padding: 16px 36px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: 'Noto Sans JP', sans-serif;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  transition: all 0.2s;
+}
+.btn-white:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.25); }
+.btn-ghost-white {
+  background: transparent;
+  color: rgba(255,255,255,0.85);
+  border: 1.5px solid rgba(255,255,255,0.3);
+  border-radius: 50px;
+  padding: 15px 28px;
+  font-size: 15px;
+  font-weight: 500;
+  font-family: 'Noto Sans JP', sans-serif;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.2s;
+}
+.btn-ghost-white:hover { border-color: white; color: white; background: rgba(255,255,255,0.08); }
+
+/* ============================================================
+   フッター
+   ============================================================ */
+footer {
+  background: #0a1f4d;
+  padding: 40px 0;
+  color: rgba(255,255,255,0.5);
+}
+.footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.footer-logo .logo-en { font-size: 17px; }
+.footer-logo .logo-ja { font-size: 9px; color: rgba(255,255,255,0.35); }
+.footer-links { display: flex; gap: 24px; }
+.footer-links a { color: rgba(255,255,255,0.45); font-size: 12px; text-decoration: none; transition: color 0.15s; }
+.footer-links a:hover { color: white; }
+.footer-copy { font-size: 11px; }
+
+/* ============================================================
+   国税庁リンク（信頼バナー）
+   ============================================================ */
+.trust-bar {
+  background: #f0f7ff;
+  border-top: 1px solid #dbeafe;
+  border-bottom: 1px solid #dbeafe;
+  padding: 12px 0;
+}
+.trust-bar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.trust-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--ink2);
+}
+.trust-item-icon { font-size: 16px; }
+.trust-item a { color: var(--blue); font-weight: 600; text-decoration: none; }
+.trust-item a:hover { text-decoration: underline; }
+
+/* ============================================================
+   モバイル対応
+   ============================================================ */
+@media (max-width: 768px) {
+  .hero-inner { grid-template-columns: 1fr; gap: 48px; }
+  .hero-visual { order: -1; }
+  .phone-frame { width: 220px; }
+  .badge-float-1 { right: -20px; top: 20px; }
+  .badge-float-2 { left: -20px; bottom: 60px; }
+  .features-grid { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: 1fr; gap: 24px; }
+  .steps::before { display: none; }
+  .target-grid { grid-template-columns: 1fr; }
+  .pricing-grid { grid-template-columns: 1fr; max-width: 380px; }
+  .footer-inner { flex-direction: column; text-align: center; }
+  .footer-links { justify-content: center; }
+  .trust-bar-inner { gap: 12px; flex-direction: column; }
+}
+
+@media (max-width: 480px) {
+  .badge-float { display: none; }
+  .section { padding: 64px 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- ナビバー -->
+<nav class="nav" id="navbar">
+  <div class="nav-inner">
+    <a href="#" class="logo-wrap">
+      <span class="logo-en">RakuThrough</span>
+      <span class="logo-ja">ラクスルー</span>
+    </a>
+    <a href="https://mimilyappdev.github.io/rakuthrough" class="nav-cta" target="_blank">
+      無料で始める →
+    </a>
+  </div>
+</nav>
+
+<!-- ヒーロー -->
+<section class="hero">
+  <div class="hero-inner">
+    <!-- テキスト -->
+    <div class="hero-text">
+      <div class="hero-eyebrow fade-up">
+        <div class="hero-eyebrow-dot"></div>
+        同人作家・VTuber・クリエイター向け
+      </div>
+      <h1 class="hero-title fade-up delay-1">
+        確定申告、<br>
+        <span class="accent">ラクスルー</span>しよう。
+      </h1>
+      <p class="hero-catchcopy fade-up delay-2">創作活動するあなたにラクスルー！</p>
+      <p class="hero-desc fade-up delay-3">
+        帳簿づけ・按分計算・青色申告の準備——<br>
+        面倒な事務作業をシステムに任せて、<br>
+        創作に集中できる時間を取り戻しましょう。
+      </p>
+      <div class="hero-btns fade-up delay-4">
+        <a href="https://mimilyappdev.github.io/rakuthrough" class="btn-primary" target="_blank">
+          🚀 無料で試してみる
+        </a>
+        <a href="#features" class="btn-secondary">機能を見る ↓</a>
+      </div>
+      <div class="hero-tags fade-up delay-5">
+        <span class="hero-tag">📱 スマホ対応</span>
+        <span class="hero-tag">☁️ クラウド同期</span>
+        <span class="hero-tag">🆓 まず無料で使える</span>
+        <span class="hero-tag">🇯🇵 日本製</span>
+      </div>
+    </div>
+
+    <!-- スマホモックアップ -->
+    <div class="hero-visual fade-up delay-2">
+      <div class="phone-frame">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <!-- モックアプリ画面 -->
+          <div class="mock-header">
+            <div class="mock-logo-wrap">
+              <div class="mock-logo-icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <path d="M7 18V10l5-2.5L17 10v8l-5 2.5L7 18z" stroke="white" stroke-width="1.8" fill="none"/>
+                  <path d="M12 7.5v9M7 10l5 2.5 5-2.5" stroke="white" stroke-width="1.8"/>
+                </svg>
+              </div>
+              <span class="mock-logo-text">RakuThrough</span>
+            </div>
+            <div class="mock-avatar">な</div>
+          </div>
+          <div class="mock-body">
+            <div class="mock-month">
+              <div class="mock-month-btn">‹</div>
+              <div class="mock-month-label">2026年4月</div>
+              <div class="mock-month-btn">›</div>
+            </div>
+            <div class="mock-summary">
+              <div class="mock-summary-label">今月の利益（確定分）</div>
+              <div class="mock-summary-amount">¥124,500</div>
+              <div class="mock-summary-row">
+                <div class="mock-summary-sub">
+                  <div class="mock-summary-sub-label">収入</div>
+                  <div class="mock-summary-sub-amount">¥185,000</div>
+                </div>
+                <div class="mock-summary-sub">
+                  <div class="mock-summary-sub-label">経費</div>
+                  <div class="mock-summary-sub-amount">¥60,500</div>
+                </div>
+              </div>
+            </div>
+            <div class="mock-tx-label">最近の取引</div>
+            <div class="mock-tx">
+              <div class="mock-tx-icon income">💴</div>
+              <div class="mock-tx-body">
+                <div class="mock-tx-desc">Skeb デザイン制作</div>
+                <div class="mock-tx-meta">2026-04-18 · 売上高</div>
+              </div>
+              <div class="mock-tx-amount income">+¥55,000</div>
+            </div>
+            <div class="mock-tx">
+              <div class="mock-tx-icon expense">📦</div>
+              <div class="mock-tx-body">
+                <div class="mock-tx-desc">同人誌 印刷費</div>
+                <div class="mock-tx-meta">2026-04-15 · 仕入高</div>
+              </div>
+              <div class="mock-tx-amount expense">-¥28,600</div>
+            </div>
+            <div class="mock-tx">
+              <div class="mock-tx-icon income">📈</div>
+              <div class="mock-tx-body">
+                <div class="mock-tx-desc">Booth 販売収入</div>
+                <div class="mock-tx-meta">2026-04-10 · 売上高</div>
+              </div>
+              <div class="mock-tx-amount income">+¥8,240</div>
+            </div>
+          </div>
+          <div class="mock-tabbar">
+            <div class="mock-tab active"><div class="mock-tab-icon">◻</div>ホーム</div>
+            <div class="mock-tab"><div class="mock-tab-icon">＋</div>入力</div>
+            <div class="mock-tab"><div class="mock-tab-icon">≡</div>履歴</div>
+            <div class="mock-tab"><div class="mock-tab-icon">⚙</div>設定</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- フローティングバッジ -->
+      <div class="badge-float badge-float-1" style="color:var(--green)">
+        <span class="badge-icon">✅</span>
+        <span>源泉徴収 自動計算</span>
+      </div>
+      <div class="badge-float badge-float-2" style="color:var(--amber)">
+        <span class="badge-icon">📐</span>
+        <span>按分も自動でOK</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 信頼バー（国税庁リンク）-->
+<div class="trust-bar">
+  <div class="trust-bar-inner container">
+    <div class="trust-item">
+      <span class="trust-item-icon">📋</span>
+      <span>青色申告特別控除（65万円）に対応</span>
+    </div>
+    <div class="trust-item">
+      <span class="trust-item-icon">🏛️</span>
+      <span>税制は
+        <a href="https://www.nta.go.jp" target="_blank" rel="noopener">国税庁公式サイト</a>
+        に基づき定期更新
+      </span>
+    </div>
+    <div class="trust-item">
+      <span class="trust-item-icon">⚠️</span>
+      <span>税務判断は必ず税理士・税務署へご確認ください</span>
+    </div>
+  </div>
+</div>
+
+<!-- 機能紹介 -->
+<section class="section features" id="features">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-eyebrow fade-up">Features</div>
+      <h2 class="section-title fade-up delay-1">クリエイターの帳簿づけに<br>必要なものが全部ある</h2>
+      <p class="section-desc fade-up delay-2">弥生会計の年間1.1万円を節約しながら、自分の活動に合わせた機能を使えます。</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card fade-up">
+        <div class="feature-icon">📱</div>
+        <div class="feature-title">スマホでパパっと入力</div>
+        <p class="feature-desc">Boothで売れたらすぐその場で記録。イベント帰りの電車の中でもサクッと入力できます。Googleアカウントでログインするだけ。</p>
+        <span class="feature-tag">PWA対応</span>
+      </div>
+      <div class="feature-card fade-up delay-1">
+        <div class="feature-icon">📐</div>
+        <div class="feature-title">按分を自動計算</div>
+        <p class="feature-desc">家賃・光熱費・通信費の事業割合をあらかじめ設定しておけば、入力時に自動で按分後の金額に変換して保存。計算ミスなし。</p>
+        <span class="feature-tag">按分設定</span>
+      </div>
+      <div class="feature-card fade-up delay-2">
+        <div class="feature-icon">🧮</div>
+        <div class="feature-title">源泉徴収も自動計算</div>
+        <p class="feature-desc">Skebやクライアント案件の源泉徴収（10.21%）を自動で計算。受け取り金額を入れるだけで総額・源泉額を表示します。</p>
+        <span class="feature-tag">源泉対応</span>
+      </div>
+      <div class="feature-card fade-up delay-1">
+        <div class="feature-icon">📊</div>
+        <div class="feature-title">月次グラフで一目把握</div>
+        <p class="feature-desc">6ヶ月の収支グラフで自分の活動サイクルが見える。売掛（Booth・FANBOXなど入金待ち）も分けて管理できます。</p>
+        <span class="feature-tag">売掛管理</span>
+      </div>
+      <div class="feature-card fade-up delay-2">
+        <div class="feature-icon">📚</div>
+        <div class="feature-title">複式簿記を自動仕訳</div>
+        <p class="feature-desc">借方・貸方の知識は不要。個人財布か事業口座かを選ぶだけで、青色申告に必要な複式簿記の仕訳を自動生成します。</p>
+        <span class="feature-tag">自動仕訳</span>
+      </div>
+      <div class="feature-card fade-up delay-3">
+        <div class="feature-icon">💾</div>
+        <div class="feature-title">CSVで弥生にも対応</div>
+        <p class="feature-desc">年度別にCSVエクスポートできるので、e-Taxへの申告は弥生に任せるスタイルもOK。ゆっくり移行できます。</p>
+        <span class="feature-tag">CSV出力</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 使い方 -->
+<section class="section howto" id="howto">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-eyebrow fade-up">How it works</div>
+      <h2 class="section-title fade-up delay-1">始め方はかんたん、3ステップ</h2>
+      <p class="section-desc fade-up delay-2">アプリのインストール不要。ブラウザで開いてGoogleログインするだけで今日から使えます。</p>
+    </div>
+    <div class="steps">
+      <div class="step fade-up">
+        <div class="step-num">1</div>
+        <div class="step-title">Googleでログイン</div>
+        <p class="step-desc">アプリを開いてGoogleアカウントでログイン。登録や個人情報の入力は一切不要です。</p>
+      </div>
+      <div class="step fade-up delay-2">
+        <div class="step-num">2</div>
+        <div class="step-title">按分率を設定する</div>
+        <p class="step-desc">設定タブで家賃・光熱費・通信費の事業割合をパーセントで入力。一度設定すれば次回から自動適用。</p>
+      </div>
+      <div class="step fade-up delay-3">
+        <div class="step-num">3</div>
+        <div class="step-title">毎日コツコツ記録</div>
+        <p class="step-desc">収入・経費が発生したらすぐ入力。年末にはCSVをエクスポートして確定申告の準備完了。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- こんな方に -->
+<section class="section target">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-eyebrow fade-up">For creators</div>
+      <h2 class="section-title fade-up delay-1">こんな方に使ってほしい</h2>
+      <p class="section-desc fade-up delay-2">副業・兼業クリエイターのリアルな悩みを解決するために作りました。</p>
+    </div>
+    <div class="target-grid">
+      <div class="target-card fade-up">
+        <div class="target-emoji">🎨</div>
+        <div>
+          <div class="target-title">同人作家・イラストレーター</div>
+          <p class="target-desc">Skeb・依頼・Booth販売の収入、印刷費・画材費の経費を一元管理。源泉徴収がある仕事も自動計算で安心。</p>
+        </div>
+      </div>
+      <div class="target-card fade-up delay-1">
+        <div class="target-emoji">📺</div>
+        <div>
+          <div class="target-title">VTuber・配信者</div>
+          <p class="target-desc">投げ銭・スパチャ・FANBOXの売掛管理、機材の減価償却、配信関連の経費をすっきり整理。</p>
+        </div>
+      </div>
+      <div class="target-card fade-up delay-2">
+        <div class="target-emoji">💻</div>
+        <div>
+          <div class="target-title">副業デザイナー・フリーランス</div>
+          <p class="target-desc">本業と副業を持つあなたに。按分機能で家賃・通信費・光熱費を自動で事業按分。節税もバッチリ。</p>
+        </div>
+      </div>
+      <div class="target-card fade-up delay-3">
+        <div class="target-emoji">🛍️</div>
+        <div>
+          <div class="target-title">Boothグッズ販売者</div>
+          <p class="target-desc">仕入高・棚卸し連動で売上原価も自動計算。青色申告決算書に必要な数字がそのまま出てきます。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 料金 -->
+<section class="section pricing" id="pricing">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-eyebrow fade-up">Pricing</div>
+      <h2 class="section-title fade-up delay-1">シンプルな料金プラン</h2>
+      <p class="section-desc fade-up delay-2">まずは無料で始めて、気に入ったらプレミアムへ。弥生会計（年間¥11,000〜）より圧倒的にお得。</p>
+    </div>
+    <div class="pricing-grid fade-up delay-1">
+      <!-- 無料プラン -->
+      <div class="plan-card">
+        <div class="plan-name">フリープラン</div>
+        <div class="plan-price-wrap">
+          <div class="plan-price">¥0<span class="plan-price-unit">/月</span></div>
+        </div>
+        <ul class="plan-features">
+          <li>収支入力（件数無制限）</li>
+          <li>月次グラフ・サマリー</li>
+          <li>按分・源泉計算</li>
+          <li>CSVエクスポート</li>
+          <li>複数デバイス同期</li>
+        </ul>
+        <a href="https://mimilyappdev.github.io/rakuthrough" class="plan-btn plan-btn-outline" target="_blank">無料で始める</a>
+      </div>
+      <!-- プレミアム -->
+      <div class="plan-card featured">
+        <div class="plan-badge">🌟 おすすめ</div>
+        <div class="plan-name">プレミアム</div>
+        <div class="plan-price-wrap">
+          <div class="plan-price">¥550<span class="plan-price-unit">/月</span></div>
+          <div class="plan-saving">年払いなら ¥3,980（約¥332/月）</div>
+        </div>
+        <ul class="plan-features">
+          <li>フリープランの全機能</li>
+          <li>テーマ着せ替え（カラー自由）</li>
+          <li>レシート写真メモ（近日公開）</li>
+          <li>優先サポート</li>
+          <li>新機能の先行利用</li>
+        </ul>
+        <a href="https://mimilyappdev.github.io/rakuthrough" class="plan-btn plan-btn-fill" target="_blank">プレミアムで始める</a>
+      </div>
+    </div>
+    <p class="pricing-note fade-up">※ 料金は予告なく変更される場合があります。PAY.JP決済対応予定。</p>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section faq" id="faq">
+  <div class="container">
+    <div class="section-header">
+      <div class="section-eyebrow fade-up">FAQ</div>
+      <h2 class="section-title fade-up delay-1">よくある質問</h2>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item fade-up" onclick="toggleFaq(this)">
+        <div class="faq-q">弥生会計は必要ですか？</div>
+        <div class="faq-a">最終的なe-Tax申告を弥生で行う場合は並行利用できます。RakuThroughからCSVをエクスポートして弥生に取り込むか、将来的にはRakuThrough単体で申告データを準備できるよう機能拡張予定です。</div>
+      </div>
+      <div class="faq-item fade-up delay-1" onclick="toggleFaq(this)">
+        <div class="faq-q">iPhoneのアプリストアから入れられますか？</div>
+        <div class="faq-a">現在はWebアプリです。SafariでRakuThroughを開き「共有ボタン → ホーム画面に追加」をすることで、アプリのように起動できます（PWA対応済）。将来的にはApp Store / Google Playへの公開を予定しています。</div>
+      </div>
+      <div class="faq-item fade-up delay-2" onclick="toggleFaq(this)">
+        <div class="faq-q">税率・按分計算は正確ですか？</div>
+        <div class="faq-a">国税庁公式サイトおよび弥生・マネーフォワード等の情報に基づき実装しています。ただし税制は毎年改正される可能性があります。確定申告前には必ず<a href="https://www.nta.go.jp" target="_blank" style="color:var(--blue)">国税庁公式サイト</a>または税理士にご確認ください。アプリはあくまで参考ツールです。</div>
+      </div>
+      <div class="faq-item fade-up delay-3" onclick="toggleFaq(this)">
+        <div class="faq-q">データはどこに保存されますか？安全ですか？</div>
+        <div class="faq-a">Googleが提供するFirebase（Firestore）を使用しています。データはGoogleのクラウドに暗号化して保存され、ログイン中のご自身のアカウントからのみアクセスできます。他のユーザーがあなたのデータを見ることはできません。</div>
+      </div>
+      <div class="faq-item fade-up delay-4" onclick="toggleFaq(this)">
+        <div class="faq-q">青色申告をしていない（白色申告）でも使えますか？</div>
+        <div class="faq-a">もちろん使えます。収支の記録・管理としてご活用いただけます。青色申告への切り替えは税務署への届け出で比較的かんたんに行えます。詳細は<a href="https://www.nta.go.jp/taxes/tetsuzuki/shinsei/annai/shinkoku/annai/09.htm" target="_blank" style="color:var(--blue)">国税庁の案内ページ</a>をご参照ください。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 最終CTA -->
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-title fade-up">さあ、今日から帳簿をラクスルーしよう。</div>
+    <p class="cta-desc fade-up delay-1">登録不要・Googleアカウントだけで今すぐ始められます。</p>
+    <div class="cta-btns">
+      <a href="https://mimilyappdev.github.io/rakuthrough" class="btn-white fade-up delay-2" target="_blank">
+        🚀 無料で始める
+      </a>
+      <a href="https://github.com/mimilyappdev/rakuthrough" class="btn-ghost-white fade-up delay-3" target="_blank">
+        GitHub で見る
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- フッター -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-logo logo-wrap">
+        <span class="logo-en">RakuThrough</span>
+        <span class="logo-ja">ラクスルー</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://www.nta.go.jp" target="_blank">国税庁</a>
+        <a href="https://github.com/mimilyappdev/rakuthrough" target="_blank">GitHub</a>
+        <a href="https://mimilyappdev.github.io/rakuthrough" target="_blank">アプリを開く</a>
+      </div>
+      <p class="footer-copy">© 2026 RakuThrough / SeventhWorks</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ============================================================
+// ナビスクロール処理
+// ============================================================
+window.addEventListener('scroll', () => {
+  const nav = document.getElementById('navbar');
+  nav.classList.toggle('scrolled', window.scrollY > 20);
+});
+
+// ============================================================
+// スクロールアニメーション（IntersectionObserver）
+// ============================================================
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      observer.unobserve(e.target); // 一度表示したら監視解除
+    }
+  });
+}, { threshold: 0.12 });
+
+document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+// ============================================================
+// FAQ アコーディオン
+// ============================================================
+function toggleFaq(item) {
+  // 他のFAQを閉じる
+  document.querySelectorAll('.faq-item.open').forEach(i => {
+    if (i !== item) i.classList.remove('open');
+  });
+  item.classList.toggle('open');
+}
+</script>
+</body>
+</html>
