@@ -59,10 +59,10 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--cream);color:var(--i
 
 /* PHONE MOCKUP */
 .hero-visual{display:flex;justify-content:center;align-items:center;position:relative;}
-.phone-outer{width:min(256px,72vw);background:var(--ink);border-radius:44px;padding:12px;box-shadow:var(--shadow-lg),0 0 0 1px rgba(255,255,255,.06);animation:float 5s ease-in-out infinite;flex-shrink:0;}
+.phone-outer{width:min(256px,72vw);aspect-ratio:9/19.5;max-height:80vh;display:flex;flex-direction:column;background:var(--ink);border-radius:44px;padding:12px;box-shadow:var(--shadow-lg),0 0 0 1px rgba(255,255,255,.06);animation:float 5s ease-in-out infinite;flex-shrink:0;}
 @keyframes float{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-12px) rotate(1deg)}}
 .phone-notch{width:76px;height:20px;background:var(--ink);border-radius:0 0 14px 14px;margin:0 auto 8px;}
-.phone-screen{background:#f5f4f0;border-radius:30px;overflow:hidden;}
+.phone-screen{background:#f5f4f0;border-radius:30px;flex:1;overflow-y:auto;}
 .mk-header{background:#fff;padding:9px 13px 8px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(0,0,0,.07);}
 .mk-logo{display:flex;align-items:center;gap:5px;}
 .mk-icon{width:22px;height:22px;background:var(--blue);border-radius:6px;display:flex;align-items:center;justify-content:center;}
@@ -230,7 +230,7 @@ footer{background:#0a1f4d;padding:34px 0;color:rgba(255,255,255,.5);}
   .hero{padding:96px 0 56px;min-height:auto;}
   .hero-inner{grid-template-columns:1fr;gap:36px;text-align:center;}
   .hero-visual{order:-1;}
-  .phone-outer{width:min(220px,62vw);margin:0 auto;}
+  .phone-outer{width:min(220px,62vw);margin:0 auto;aspect-ratio:9/19.5;}
   .badge-float{display:none;}
   .hero-catchcopy-sub{text-align:left;}
   .feat-grid{grid-template-columns:1fr;}
@@ -246,7 +246,7 @@ footer{background:#0a1f4d;padding:34px 0;color:rgba(255,255,255,.5);}
 }
 @media(max-width:480px){
   .hero-inner,.container{padding:0 16px;}
-  .phone-outer{width:min(190px,56vw);}
+  .phone-outer{width:min(190px,56vw);aspect-ratio:9/19.5;}
 }
 </style>
 </head>
@@ -258,7 +258,7 @@ footer{background:#0a1f4d;padding:34px 0;color:rgba(255,255,255,.5);}
       <span class="logo-en">RakuThrough</span>
       <span class="logo-ja">ラクスルー</span>
     </a>
-    <a href="https://mimilyappdev.github.io/rakuthrough/" class="nav-cta" target="_blank">無料で始める →</a>
+    <a href="https://bluetaxapp.netlify.app" class="nav-cta" target="_blank">無料で始める →</a>
   </div>
 </nav>
 
@@ -275,7 +275,7 @@ footer{background:#0a1f4d;padding:34px 0;color:rgba(255,255,255,.5);}
       </p>
       <p class="hero-desc fade-up d3">帳簿づけ・按分計算・青色申告の準備——<br>面倒な事務作業をシステムに任せて、<br>創作に集中できる時間を取り戻しましょう。</p>
       <div class="hero-btns fade-up d4">
-        <a href="https://mimilyappdev.github.io/rakuthrough/" class="btn-primary" target="_blank">🚀 無料で試してみる</a>
+        <a href="https://bluetaxapp.netlify.app" class="btn-primary" target="_blank">🚀 無料で試してみる</a>
       </div>
       <div class="hero-tags fade-up d5">
         <span class="hero-tag">📱 スマホ対応</span>
@@ -331,7 +331,6 @@ footer{background:#0a1f4d;padding:34px 0;color:rgba(255,255,255,.5);}
 <!-- TRUST BAR -->
 <div class="trust-bar">
   <div class="trust-inner container">
-    <div class="trust-item">📋 青色申告特別控除（65万円）に対応</div>
     <div class="trust-item">🏛️ 税制は<a href="https://www.nta.go.jp" target="_blank" rel="noopener">国税庁公式サイト</a>に基づき定期更新</div>
     <div class="trust-item">⚠️ 税務判断は必ず税理士・税務署へご確認ください</div>
   </div>
@@ -341,8 +340,8 @@ footer{background:#0a1f4d;padding:34px 0;color:rgba(255,255,255,.5);}
 <section class="skeb-banner">
   <div class="container skeb-inner">
     <div class="skeb-label fade-up">よくある悩み</div>
-    <h2 class="skeb-title fade-up d1">副業でSkebの利益が<span class="skeb-hl">20万円を超えた…</span><br>確定申告すべき？迷うあなたへ、<br><span style="color:#fff">ラクスルー！</span></h2>
-    <p class="skeb-sub fade-up d2">「何を入力すればいいかわからない」「難しそう」そんな不安を解消。<br>直感的な操作で、はじめての確定申告もスムーズに。</p>
+    <h2 class="skeb-title fade-up d1">Skebでたくさんイラストを描けた！<br>でも、<span class="skeb-hl">申告はちょっと不安…</span></h2>
+    <p class="skeb-sub fade-up d2">まずはラクスルーで記録から始めよう。<br>難しい計算はアプリにおまかせ。直感的な操作で、はじめての確定申告もスムーズに。</p>
   </div>
 </section>
 
@@ -360,7 +359,7 @@ footer{background:#0a1f4d;padding:34px 0;color:rgba(255,255,255,.5);}
       <div class="feat-card fade-up d2"><div class="feat-icon">🧮</div><div class="feat-title">源泉徴収も自動計算</div><p class="feat-desc">Skebやクライアント案件の源泉徴収（10.21%）を自動で計算。受け取り金額を入れるだけで総額・源泉額を表示。</p><span class="feat-tag">源泉対応</span></div>
       <div class="feat-card fade-up"><div class="feat-icon">📊</div><div class="feat-title">月次グラフで一目把握</div><p class="feat-desc">6ヶ月の収支グラフで活動サイクルが一目でわかります。FANBOX等の入金待ち売掛も分けて管理。</p><span class="feat-tag">売掛管理</span></div>
       <div class="feat-card fade-up d1"><div class="feat-icon">📚</div><div class="feat-title">複式簿記を自動仕訳</div><p class="feat-desc">借方・貸方の知識は不要。個人財布か事業口座かを選ぶだけで、青色申告に必要な複式簿記を自動生成。</p><span class="feat-tag">自動仕訳</span></div>
-      <div class="feat-card fade-up d2"><div class="feat-icon">💾</div><div class="feat-title">CSV出力機能あり</div><p class="feat-desc">年度別にCSVエクスポートできます。別の会計ツールやExcelでの管理にもご活用いただけます。</p><span class="feat-tag">CSV出力</span></div>
+      <div class="feat-card fade-up d2"><div class="feat-icon">💾</div><div class="feat-title">CSV出力機能あり</div><p class="feat-desc">青色申告の準備に使えるCSVを出力できます。別の会計ツールやExcelでの管理にもご活用いただけます。</p><span class="feat-tag">CSV出力</span></div>
     </div>
   </div>
 </section>
@@ -428,6 +427,7 @@ footer{background:#0a1f4d;padding:34px 0;color:rgba(255,255,255,.5);}
         <tr><td>一般会計ソフト A</td><td>¥1,100〜</td><td>¥13,200〜</td><td class="chk-n">汎用設計・高機能</td></tr>
         <tr><td>一般会計ソフト B</td><td>¥990〜</td><td>¥11,880〜</td><td class="chk-n">汎用設計・高機能</td></tr>
         <tr><td>一般会計ソフト C</td><td>¥1,650〜</td><td>¥19,800〜</td><td class="chk-n">法人向けも含む多機能</td></tr>
+        <tr><td>一般会計ソフト D</td><td>¥800〜</td><td>¥9,600〜</td><td class="chk-n">中規模向け設計</td></tr>
         <tr class="raku"><td><b>🚀 RakuThrough</b></td><td><span class="p-strong g">¥0〜¥550</span></td><td><span class="p-strong g">¥0〜¥3,980</span></td><td class="chk-y">✓ クリエイター特化</td></tr>
       </tbody>
     </table>
@@ -439,7 +439,7 @@ footer{background:#0a1f4d;padding:34px 0;color:rgba(255,255,255,.5);}
         <ul class="plan-feats">
           <li>収支入力（件数無制限）</li><li>月次グラフ・サマリー</li><li>按分・源泉計算</li><li>CSV出力</li><li>複数デバイス同期</li>
         </ul>
-        <a href="https://mimilyappdev.github.io/rakuthrough/" class="plan-btn plan-btn-out" target="_blank">無料で始める</a>
+        <a href="https://bluetaxapp.netlify.app" class="plan-btn plan-btn-out" target="_blank">無料で始める</a>
       </div>
       <div class="plan-card feat">
         <div class="plan-badge">🌟 おすすめ</div>
@@ -448,7 +448,7 @@ footer{background:#0a1f4d;padding:34px 0;color:rgba(255,255,255,.5);}
         <ul class="plan-feats">
           <li>フリープランの全機能</li><li>テーマ着せ替え</li><li>レシート写真メモ（近日）</li><li>優先サポート</li><li>新機能の先行利用</li>
         </ul>
-        <a href="https://mimilyappdev.github.io/rakuthrough/" class="plan-btn plan-btn-fill" target="_blank">プレミアムで始める</a>
+        <a href="https://bluetaxapp.netlify.app" class="plan-btn plan-btn-fill" target="_blank">プレミアムで始める</a>
       </div>
     </div>
   </div>
@@ -476,7 +476,7 @@ footer{background:#0a1f4d;padding:34px 0;color:rgba(255,255,255,.5);}
   <div class="container">
     <div class="cta-title fade-up">さあ、帳簿をラクスルーしよう。</div>
     <p class="cta-desc fade-up d1">Googleアカウントだけで今すぐ、無料で始められます。</p>
-    <div class="cta-btns"><a href="https://mimilyappdev.github.io/rakuthrough/" class="btn-white fade-up d2" target="_blank">🚀 無料で始める</a></div>
+    <div class="cta-btns"><a href="https://bluetaxapp.netlify.app" class="btn-white fade-up d2" target="_blank">🚀 無料で始める</a></div>
   </div>
 </section>
 
@@ -484,8 +484,8 @@ footer{background:#0a1f4d;padding:34px 0;color:rgba(255,255,255,.5);}
   <div class="container">
     <div class="foot-inner">
       <div class="logo-wrap"><span class="logo-en">RakuThrough</span><span class="logo-ja" style="color:rgba(255,255,255,.32)">ラクスルー</span></div>
-      <div class="foot-links"><a href="https://www.nta.go.jp" target="_blank">国税庁</a><a href="https://mimilyappdev.github.io/rakuthrough/" target="_blank">アプリを開く</a></div>
-      <p class="foot-copy">© 2026 RakuThrough / SeventhWorks</p>
+      <div class="foot-links"><a href="https://www.nta.go.jp" target="_blank">国税庁</a><a href="https://bluetaxapp.netlify.app" target="_blank">アプリを開く</a></div>
+      <p class="foot-copy">© 2026 RakuThrough　by Mimily / アイウィル</p>
     </div>
   </div>
 </footer>

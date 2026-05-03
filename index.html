@@ -1361,19 +1361,28 @@ async function loadCategories() {
 
 // カスタム科目の追加（カスタムのみFirestoreへ保存）
 window.addCategory = async () => {
-  const name = document.getElementById('new-cat-name').value.trim();
-  const type = document.getElementById('new-cat-type').value;
+  const nameEl = document.getElementById('new-cat-name');
+  const typeEl = document.getElementById('new-cat-type');
+  if (!nameEl || !typeEl) { showToast('入力欄が見つかりません'); return; }
+  const name = nameEl.value.trim();
+  const type = typeEl.value;
   if (!name) { showToast('科目名を入力してください'); return; }
   const id  = 'cat_' + Date.now();
-  const cat = { id, name, type, emoji: type === 'income' ? '💰' : '📋', color: '#6b7280' };
+  // desc：入力フォームの科目説明欄に表示するテキスト（ないとエラーになる）
+  const cat = { id, name, type, emoji: type === 'income' ? '💰' : '📋', color: '#6b7280', desc: name + 'として記録する科目です。' };
   try {
-    await setDoc(doc(db, 'users', currentUser.uid, 'categories', id), { name, type, emoji: cat.emoji, color: cat.color });
+    await setDoc(doc(db, 'users', currentUser.uid, 'categories', id),
+      { name, type, emoji: cat.emoji, color: cat.color, desc: cat.desc });
     categories.push(cat);
-    renderCategoryManage();
+    const list = document.getElementById('cat-manage-list');
+    if (list) renderCategoryManage(); // nullガード：要素がある場合のみ再描画
     initEntryForm();
-    document.getElementById('new-cat-name').value = '';
-    showToast('追加しました');
-  } catch(e) { showToast('エラーが発生しました'); }
+    nameEl.value = '';
+    showToast('「' + name + '」を追加しました');
+  } catch(e) {
+    console.error('addCategory error:', e); // 原因特定用ログ
+    showToast('追加に失敗しました：' + (e.message || e));
+  }
 };
 
 // 科目削除（デフォルト科目は削除不可）
