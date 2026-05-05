@@ -102,7 +102,18 @@ body {
 .loading-text { font-size: 13px; color: var(--ink2); }
 
 /* ===== AUTH画面 ===== */
-#auth-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; background: var(--bg); }
+/* ===== AUTH画面（ログイン前の全画面表示）=====
+   bodyはmax-width:480pxで中央寄せされているが、auth画面だけは
+   fixed で画面全体を覆う。ログイン画面はコンテンツを画面中央に
+   大きく表示したいため。 */
+#auth-screen {
+  position: fixed; inset: 0;   /* 画面全体を覆う */
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 40px 24px;
+  background-color: var(--bg);
+  background-image: var(--pattern, none);
+  background-size: var(--pattern-size, auto);
+}
 .auth-logo { width: 64px; height: 64px; background: var(--accent); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; }
 .auth-logo svg { width: 32px; height: 32px; }
 .auth-sub { font-size: 14px; color: var(--ink2); text-align: center; margin-bottom: 40px; line-height: 1.6; }
@@ -1214,38 +1225,45 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 window.loginWithGoogle = async () => {
-  isLoggingIn = true; // ← ログイン開始。onAuthStateChanged(null)が来ても画面を戻さない
+  isLoggingIn = true;
   const provider = new GoogleAuthProvider();
 
   // ============================================================
-  // PWAスタンドアロンモード検知
-  // iPhoneのホーム画面追加・Androidの「アプリとしてインストール」で起動した場合、
-  // signInWithPopupはポップアップウィンドウを開けず失敗する。
-  // → PWA時は最初からリダイレクト方式を使う（ページ遷移してGoogleログイン画面を開く）
+  // ログイン方式の選択ロジック
+  //
+  // ┌ iOS Safari PWA（ホーム画面追加）
+  // │   navigator.standalone === true になる
+  // │   → signInWithPopup 不可（ポップアップ用の別ウィンドウが開けない）
+  // │   → signInWithRedirect を使う
+  // │
+  // ├ Android Chrome PWA（インストール済み）
+  // │   display-mode: standalone になるが navigator.standalone は undefined
+  // │   → signInWithPopup が使える（Chrome が内部でウィンドウを開いてくれる）
+  // │   → Popup を使う（redirect後にPWA文脈で結果を受け取れない問題を回避）
+  // │
+  // └ 通常ブラウザ（Chrome / Safari / Firefox）
+  //     → Popup を使う
   // ============================================================
-  const isPwa = window.navigator.standalone === true ||  // iOS Safari PWA
-                window.matchMedia('(display-mode: standalone)').matches; // Android PWA
+  const isIOSPwa = window.navigator.standalone === true; // iOS Safari PWAのみ true
 
-  if (isPwa) {
-    // PWAモード：リダイレクト方式（ページを離れてGoogleにジャンプ → 戻ってくる）
+  if (isIOSPwa) {
+    // iOS PWAのみリダイレクト方式
     try { await signInWithRedirect(auth, provider); }
     catch(e) { isLoggingIn = false; showToast('ログインに失敗しました: ' + e.code); }
     return;
   }
 
-  // 通常ブラウザモード：ポップアップ方式
+  // Android PWA・通常ブラウザはポップアップ方式
   try {
     await signInWithPopup(auth, provider);
-    // 成功した場合はonAuthStateChanged(user)が呼ばれてアプリが表示されるので何もしない
   } catch(e) {
     if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user') {
-      // ポップアップがブロックされた場合はリダイレクト方式に切り替え
       try { await signInWithRedirect(auth, provider); }
       catch(e2) { isLoggingIn = false; showToast('ログインに失敗しました'); }
     } else if (e.code === 'auth/cancelled-popup-request') {
-      // 複数回クリック時は無視（フラグは維持）
+      // 複数回クリック時は無視
     } else {
-      isLoggingIn = false; // 予期せぬエラーはフラグ解除してログイン画面に戻す
+      isLoggingIn = false;
       showToast('ログインに失敗しました: ' + e.code);
     }
   }
