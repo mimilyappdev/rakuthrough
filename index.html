@@ -4,24 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>RakuThrough — ラクスルー</title>
-
-<!-- ============================================================
-     PWA設定（ホーム画面追加でURLバーを消す）
-     iPhoneのSafariで「共有→ホーム画面に追加」するとスタンドアロンアプリになる
-     ============================================================ -->
-<!-- iOS Safari用（これだけでiPhoneのホーム画面追加が有効になる） -->
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="ラクスルー">
-<!-- iOS用アイコン（SVGをbase64で埋め込み・外部ファイル不要） -->
-<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjE5MiIgaGVpZ2h0PSIxOTIiIHJ4PSI0MCIgZmlsbD0iIzFhNTZkYiIvPjxwYXRoIGQ9Ik01NiAxNDRWODBsNDAtMjAgNDAgMjB2NjRsLTQwIDIwLTQwLTIweiIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSI5IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTk2IDYwdjgwTTU2IDgwbDQwIDIwIDQwLTIwIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjkiLz48L3N2Zz4=">
-<!-- テーマカラー（ブラウザのアドレスバーの色） -->
-<meta name="theme-color" content="#1a56db">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@900&family=Zen+Maru+Gothic:wght@400;700&family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /* ============================================================
    CSS変数（テーマの土台）
-   html に data-theme="xxx" をセットするだけで全体が切り替わる（bodyではなくhtmlに当てることでPWA時の左右灰色帯を防ぐ）
+   body に data-theme="xxx" をセットするだけで全体が切り替わる
    Ver.7.0: --green / --purple を追加（入金ステータス・売掛表示用）
    ============================================================ */
 :root {
@@ -75,12 +62,10 @@
   --pattern: none; --pattern-size: auto;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+/* htmlタグにもbg色を当てる（PWA灰色帯バグ修正）*/
+html { background-color: var(--bg); }
 
-/* html要素にも背景色を当てる（PWAスタンドアロン時にbody外が灰色になるバグ対策）*/
-html {
-  background-color: var(--bg);
-}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 /* body: background-colorとbackground-imageを分けて書く（shorthandだとpatternが消えるバグ対策）*/
 body {
@@ -101,25 +86,25 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading-text { font-size: 13px; color: var(--ink2); }
 
-/* ===== AUTH画面 ===== */
-/* ===== AUTH画面（ログイン前の全画面表示）=====
-   bodyはmax-width:480pxで中央寄せされているが、auth画面だけは
-   fixed で画面全体を覆う。ログイン画面はコンテンツを画面中央に
-   大きく表示したいため。 */
-#auth-screen {
-  position: fixed; inset: 0;   /* 画面全体を覆う */
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 40px 24px;
-  background-color: var(--bg);
-  background-image: var(--pattern, none);
-  background-size: var(--pattern-size, auto);
-}
+/* ===== AUTH画面（フルスクリーン固定）===== */
+#auth-screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; background: var(--bg); z-index: 50; }
 .auth-logo { width: 64px; height: 64px; background: var(--accent); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; }
 .auth-logo svg { width: 32px; height: 32px; }
 .auth-sub { font-size: 14px; color: var(--ink2); text-align: center; margin-bottom: 40px; line-height: 1.6; }
 .google-btn { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 24px; font-size: 15px; font-weight: 500; color: var(--ink); cursor: pointer; width: 100%; max-width: 300px; transition: background 0.15s, transform 0.1s; }
 .google-btn:hover { background: var(--surface2); }
 .google-btn:active { transform: scale(0.98); }
+
+/* ログインエラーボックス */
+.login-error { display: none; margin-top: 12px; padding: 10px 16px; background: #fdf0ee; border: 1px solid #c0392b; border-radius: var(--radius-sm); color: #c0392b; font-size: 13px; text-align: center; width: 100%; max-width: 300px; }
+.login-error.show { display: block; }
+
+/* ===== メンテナンス中画面 ===== */
+#maintenance-screen { position: fixed; inset: 0; background: var(--bg); display: none; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; z-index: 200; }
+.maint-icon { font-size: 64px; margin-bottom: 24px; }
+.maint-title { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 28px; color: var(--accent); margin-bottom: 8px; }
+.maint-sub { font-size: 15px; color: var(--ink2); text-align: center; line-height: 1.8; margin-bottom: 24px; }
+.maint-badge { display: inline-block; background: var(--amber-light); color: var(--amber); border: 1px solid var(--amber); border-radius: 20px; padding: 6px 18px; font-size: 13px; font-weight: 600; }
 
 /* ===== メインアプリ ===== */
 #app { display: none; }
@@ -138,7 +123,7 @@ body {
 .tab-item.active .tab-label { color: var(--accent); }
 .tab-item.active .tab-icon { transform: scale(1.1); }
 
-.page { display: none; padding: 14px; animation: fadeUp 0.2s ease; }
+.page { display: none; padding: 20px; animation: fadeUp 0.2s ease; }
 .page.active { display: block; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -155,10 +140,10 @@ body {
 .summary-sub-label { font-size: 11px; opacity: 0.7; margin-bottom: 4px; }
 .summary-sub-amount { font-size: 18px; font-weight: 600; font-family: var(--mono); }
 /* 売掛残高カード（pending収入がある月のみ表示）*/
-.pending-card { background: var(--amber-light); border: 1px solid rgba(184,134,11,0.25); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 14px; display: none; justify-content: space-between; align-items: center; }
+.pending-card { background: var(--accent-light); border: 1px solid rgba(184,134,11,0.25); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 14px; display: none; justify-content: space-between; align-items: center; }
 .pending-card.show { display: flex; }
-.pending-card-label { font-size: 12px; color: var(--amber); font-weight: 600; }
-.pending-card-amount { font-size: 17px; font-weight: 700; font-family: var(--mono); color: var(--amber); }
+.pending-card-label { font-size: 12px; color: var(--accent); font-weight: 600; }
+.pending-card-amount { font-size: 17px; font-weight: 700; font-family: var(--mono); color: var(--accent); }
 
 .section-title { font-size: 13px; font-weight: 500; color: var(--ink2); margin-bottom: 12px; letter-spacing: 0.02em; }
 .chart-wrap { background: var(--surface); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
@@ -177,7 +162,7 @@ body {
 .tx-list { display: flex; flex-direction: column; gap: 8px; }
 .tx-card { background: var(--surface); border-radius: var(--radius-sm); padding: 13px 16px; display: flex; align-items: center; gap: 12px; }
 /* 売掛（pending）の取引は左ボーダーをアンバーに */
-.tx-card.is-pending { border-left: 3px solid var(--amber); }
+.tx-card.is-pending { border-left: 3px solid var(--accent); }
 .tx-icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
 .tx-icon.income { background: var(--accent-light); }
 .tx-icon.expense { background: var(--red-light); }
@@ -196,9 +181,9 @@ body {
 
 /* バッジ類 ===================== */
 /* クレジットカードバッジ */
-.card-badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--amber-light); color: var(--amber); font-weight: 500; margin-left: 4px; vertical-align: middle; }
+.card-badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--accent-light); color: var(--accent); font-weight: 500; margin-left: 4px; vertical-align: middle; }
 /* 売掛（未入金）バッジ */
-.pending-badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--amber-light); color: var(--amber); font-weight: 600; margin-left: 4px; vertical-align: middle; }
+.pending-badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--accent-light); color: var(--accent); font-weight: 600; margin-left: 4px; vertical-align: middle; }
 /* 源泉徴収バッジ */
 .withholding-badge { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 10px; background: var(--accent-light); color: var(--accent); font-weight: 500; margin-left: 4px; vertical-align: middle; }
 /* 事業口座バッジ（個人はデフォルトなので非表示）*/
@@ -207,34 +192,24 @@ body {
 .cat-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-right: 2px; }
 
 /* クレカサマリー（履歴・クレカフィルター時）*/
-.card-summary { background: var(--amber-light); border: 1px solid rgba(184,134,11,0.2); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
-.card-summary-label { font-size: 12px; color: var(--amber); font-weight: 500; }
-.card-summary-amount { font-size: 20px; font-weight: 600; font-family: var(--mono); color: var(--amber); }
+.card-summary { background: var(--accent-light); border: 1px solid rgba(184,134,11,0.2); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+.card-summary-label { font-size: 12px; color: var(--accent); font-weight: 500; }
+.card-summary-amount { font-size: 20px; font-weight: 600; font-family: var(--mono); color: var(--accent); }
 
-/* 按分プレビュー（入力フォーム内・按分対象科目選択時に表示）*/
-.apportionment-preview { display: none; margin-top: 8px; padding: 10px 14px; background: var(--green-light); border-radius: var(--radius-sm); border: 1px solid rgba(21,128,61,0.2); font-size: 13px; color: var(--green); line-height: 1.7; }
-.apportionment-preview.show { display: block; }
-
-/* 按分設定フォーム（設定タブ）*/
-.apportionment-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; margin-bottom: 10px; }
-.apportionment-label { font-size: 13px; color: var(--ink); }
-.apportionment-input-wrap { display: flex; align-items: center; gap: 4px; }
-.apportionment-input { width: 64px; padding: 6px 8px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; font-family: var(--mono); font-weight: 600; text-align: right; color: var(--ink); background: var(--bg); outline: none; }
-.apportionment-input:focus { border-color: var(--accent); background: var(--surface); }
-.apportionment-unit { font-size: 13px; color: var(--ink2); flex-shrink: 0; }
-.type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-.type-btn { padding: 9px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface); cursor: pointer; font-size: 14px; font-weight: 500; color: var(--ink2); transition: all 0.15s; font-family: 'Noto Sans JP', sans-serif; }
+/* ===== 入力フォーム ===== */
+.type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+.type-btn { padding: 12px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface); cursor: pointer; font-size: 14px; font-weight: 500; color: var(--ink2); transition: all 0.15s; font-family: 'Noto Sans JP', sans-serif; }
 .type-btn.active-income { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
 .type-btn.active-expense { border-color: var(--red); background: var(--red-light); color: var(--red); }
 
-.form-card { background: var(--surface); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 8px; }
-.form-group { margin-bottom: 6px; }
-.form-label { font-size: 11px; font-weight: 500; color: var(--ink2); margin-bottom: 2px; display: block; }
-.form-input { width: 100%; padding: 7px 10px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 0.875rem; font-family: 'Noto Sans JP', sans-serif; color: var(--ink); background: var(--bg); outline: none; transition: border-color 0.15s; box-sizing: border-box; min-width: 0; }
+.form-card { background: var(--surface); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+.form-group { margin-bottom: 10px; }
+.form-label { font-size: 11px; font-weight: 500; color: var(--ink2); margin-bottom: 4px; display: block; }
+.form-input { width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 0.875rem; font-family: 'Noto Sans JP', sans-serif; color: var(--ink); background: var(--bg); outline: none; transition: border-color 0.15s; box-sizing: border-box; min-width: 0; }
 .form-input:focus { border-color: var(--accent); background: var(--surface); }
 .amount-input { font-family: var(--mono); font-size: 1.25rem; font-weight: 600; }
 /* 摘要・メモ横並び（2:1）。日付は単独行でiOS問題を回避 */
-.form-row { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-bottom: 6px; }
+.form-row { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-bottom: 10px; }
 .form-row .form-group { margin-bottom: 0; }
 /* iOSのdate inputをリセット */
 input[type="date"] { -webkit-appearance: none; appearance: none; max-width: 200px; }
@@ -250,7 +225,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 
 /* 科目グリッド（入力時：色なし）*/
 .category-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.cat-btn { padding: 8px 2px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface); font-size: 10px; font-weight: 500; color: var(--ink2); cursor: pointer; text-align: center; transition: all 0.15s; font-family: 'Noto Sans JP', sans-serif; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cat-btn { padding: 8px 4px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface); font-size: 11px; font-weight: 500; color: var(--ink2); cursor: pointer; text-align: center; transition: all 0.15s; font-family: 'Noto Sans JP', sans-serif; line-height: 1.3; }
 .cat-btn.selected { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
 
 /* ===== 個人/事業スイッチ（Ver.7.0新規）===== */
@@ -264,16 +239,16 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 /* Booth・Skeb・FANBOXなど「売った日≠入金日」の売掛管理 */
 .status-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
 .status-btn { padding: 10px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface); font-size: 13px; font-weight: 500; color: var(--ink2); cursor: pointer; font-family: 'Noto Sans JP', sans-serif; transition: all 0.15s; text-align: center; }
-.status-btn.active-settled { border-color: var(--green); background: var(--green-light); color: var(--green); }
-.status-btn.active-pending { border-color: var(--amber); background: var(--amber-light); color: var(--amber); }
+.status-btn.active-settled { border-color: var(--accent); background: var(--accent-light); color: var(--accent); font-weight:700; }
+.status-btn.active-pending { border-color: var(--accent); background: var(--accent-light); color: var(--accent); font-weight:700; }
 
 /* 支払い方法トグル */
 .payment-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px; }
 .payment-btn { padding: 10px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface); font-size: 13px; font-weight: 500; color: var(--ink2); cursor: pointer; font-family: 'Noto Sans JP', sans-serif; transition: all 0.15s; }
-.payment-btn.active-card { border-color: var(--amber); background: var(--amber-light); color: var(--amber); }
+.payment-btn.active-card { border-color: var(--accent); background: var(--accent-light); color: var(--accent); font-weight: 700; }
 .payment-btn.active-cash { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
 
-.submit-btn { width: 100%; padding: 12px; border-radius: var(--radius); background: var(--accent); color: white; border: none; font-size: 16px; font-weight: 700; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; transition: opacity 0.15s, transform 0.1s; }
+.submit-btn { width: 100%; padding: 16px; border-radius: var(--radius); background: var(--accent); color: white; border: none; font-size: 16px; font-weight: 700; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; transition: opacity 0.15s, transform 0.1s; }
 .submit-btn:active { opacity: 0.85; transform: scale(0.99); }
 .submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -379,10 +354,10 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 }
 .seg-btn {
   flex: 1;
-  padding: 7px 8px;
+  padding: 10px 8px;
   border: none; border-radius: 8px;
   background: transparent;
-  font-size: 14px; font-weight: 700;
+  font-size: 15px; font-weight: 700;
   color: var(--ink2); cursor: pointer;
   font-family: inherit;
   transition: all 0.15s;
@@ -390,7 +365,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   align-items: center; gap: 2px;
   line-height: 1.3;
 }
-.seg-btn .seg-main { font-size: 14px; font-weight: 700; }
+.seg-btn .seg-main { font-size: 15px; font-weight: 700; }
 .seg-btn .seg-sub  { font-size: 10px; color: var(--ink3); font-weight: 400; }
 .seg-btn.seg-on {
   background: var(--accent-light);
@@ -399,13 +374,6 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   box-shadow: 0 1px 4px rgba(26,86,219,0.15);
 }
 .seg-btn.seg-on .seg-sub { color: rgba(26,86,219,0.7); }
-.seg-btn.seg-on-red {
-  background: var(--red-light);
-  color: var(--red);
-  font-weight: 700;
-  box-shadow: 0 1px 4px rgba(192,57,43,0.15);
-}
-.seg-btn.seg-on-red .seg-sub { color: rgba(192,57,43,0.7); }
 
 /* ============================================================
    Ver.8.0: ❓ツールチップ
@@ -436,21 +404,6 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 }
 .tip-btn.tip-open .tip-box { display: block; }
 
-/* ===== 勘定科目説明文（画面下部固定・スクロール不要） ===== */
-#cat-desc-box {
-  display: none;
-  margin-top: 8px;
-  padding: 9px 12px;
-  background: var(--accent-light);
-  border-radius: var(--radius-sm);
-  font-size: 11px;
-  color: var(--ink2);
-  line-height: 1.7;
-  white-space: pre-line;
-}
-#cat-desc-box.expense-mode {
-  background: var(--red-light);
-}
 </style>
 </head>
 <body>
@@ -461,6 +414,17 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   <div class="loading-text">読み込み中...</div>
 </div>
 
+<!-- ============================================================
+     メンテナンス中画面
+     表示切り替えはJSの MAINTENANCE_MODE フラグで制御
+     ============================================================ -->
+<div id="maintenance-screen">
+  <div class="maint-icon">🛠️</div>
+  <div class="maint-title">RakuThrough</div>
+  <div class="maint-sub">ただいまメンテナンス中です。<br>ご不便をおかけして申し訳ありません。<br>しばらく時間をおいてアクセスしてください。</div>
+  <div class="maint-badge">⏰ メンテナンス中</div>
+</div>
+
 <!-- 認証画面 -->
 <div id="auth-screen" style="display:none">
   <div class="auth-logo">
@@ -469,7 +433,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
       <path d="M16 8v16M8 12l8 4 8-4" stroke="white" stroke-width="1.5"/>
     </svg>
   </div>
-  <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:36px;color:#1E6BE6;letter-spacing:-0.5px;margin-bottom:4px;">RakuThrough</div>
+  <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:36px;color:#1a56db;letter-spacing:-0.5px;margin-bottom:4px;">RakuThrough</div>
   <div style="font-family:'Zen Maru Gothic',sans-serif;font-weight:700;font-size:13px;color:#6b7280;letter-spacing:4px;margin-bottom:20px;">ラクスルー</div>
   <!-- キャッチコピー（3種ローテーション）-->
   <div id="catchcopy" style="font-family:'Zen Maru Gothic',sans-serif;font-size:14px;font-weight:700;color:#a8a79f;margin-bottom:48px;text-align:center;min-height:1.6em;transition:opacity 0.6s ease;">創作活動するあなたに確定申告ラクスルー！</div>
@@ -481,10 +445,10 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
       <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
       <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.29-8.16 2.29-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
     </svg>
-    <span id="login-btn-text">Googleでログイン</span>
+    Googleでログイン
   </button>
-  <!-- エラー表示ボックス（ログインに失敗したときここに表示） -->
-  <div id="auth-error" style="display:none;margin-top:16px;padding:12px 16px;background:#fdf0ee;border:1px solid #f5a9a0;border-radius:10px;font-size:13px;color:#c0392b;max-width:300px;word-break:break-all;text-align:left;line-height:1.6;"></div>
+  <!-- ログインエラー表示ボックス -->
+  <div class="login-error" id="login-error"></div>
 </div>
 
 <!-- メインアプリ -->
@@ -498,7 +462,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
         </svg>
       </div>
       <div>
-        <div class="header-title" style="font-family:'Nunito',sans-serif;font-weight:900;font-size:17px;color:#1E6BE6;letter-spacing:-0.3px;">RakuThrough</div>
+        <div class="header-title" style="font-family:'Nunito',sans-serif;font-weight:900;font-size:17px;color:#1a56db;letter-spacing:-0.3px;">RakuThrough</div>
         <div style="font-family:'Zen Maru Gothic',sans-serif;font-size:10px;color:#6b7280;letter-spacing:2px;line-height:1;">ラクスルー</div>
       </div>
     </div>
@@ -581,11 +545,11 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
         <label class="form-label">金額（円）</label>
         <!-- 源泉説明：源泉ボタンの上に配置・収入タブのみ表示 -->
         <div id="gensen-help-wrap" style="margin-bottom:5px;">
+          <button class="tip-btn" onclick="toggleTip(this)">? 源泉徴収とは<span class="tip-box">クライアントから支払われる前に税金（10.21%）が引かれる仕組みです。請求書に源泉徴収がある場合は「源泉」ボタンをオンにしてください。</span></button>
         </div>
         <div class="amount-row">
-          <input class="form-input amount-input" type="text" id="entry-amount" placeholder="0" inputmode="numeric" oninput="formatAmountInput(this);calcWithholding();updateApportionPreview()">
+          <input class="form-input amount-input" type="number" id="entry-amount" placeholder="0" inputmode="numeric" oninput="calcWithholding()">
           <button class="withholding-btn" id="withholding-btn" onclick="toggleWithholding()">源泉</button>
-          <button class="tip-btn" id="gensen-tip-btn" onclick="toggleTip(this)" style="flex-shrink:0;font-size:9px;padding:2px 4px;">?<span class="tip-box">クライアントから支払われる前に税金（10.21%）が引かれる仕組みです。源泉徴収がある場合は「源泉」ボタンをオンにしてください。</span></button>
         </div>
         <div class="withholding-result" id="withholding-result"></div>
       </div>
@@ -644,14 +608,9 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
         <label class="form-label">勘定科目</label>
 
         <div class="category-grid" id="category-grid"></div>
-
       </div>
     </div>
 
-    <!-- 勘定科目説明文（画面下部固定） -->
-    <div id="cat-desc-box"></div>
-    <!-- 按分プレビュー（按分対象科目+金額入力時のみ表示）-->
-    <div class="apportionment-preview" id="apportionment-preview"></div>
     <button class="submit-btn" onclick="submitEntry()">記録する</button>
   </div>
 
@@ -708,89 +667,18 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
       </button>
       <div class="accordion-body">
         <div class="cat-manage" id="cat-manage-list"></div>
-        <div class="add-cat-form" style="flex-direction:column;">
-          <div style="display:flex;gap:8px;">
-            <select class="add-cat-input" id="new-cat-type" style="flex:1;min-width:0;">
-              <option value="income">＋ 収入科目</option>
-              <option value="expense">－ 経費科目</option>
-            </select>
-            <button class="add-cat-btn" onclick="addCategory()">追加</button>
-          </div>
-          <input class="add-cat-input" type="text" id="new-cat-name" placeholder="科目名を入力（例：仕入高）" style="width:100%;">
+        <div class="add-cat-form">
+          <select class="add-cat-input" id="new-cat-type" style="max-width:90px">
+            <option value="income">収入</option>
+            <option value="expense">経費</option>
+          </select>
+          <input class="add-cat-input" type="text" id="new-cat-name" placeholder="科目名を入力">
+          <button class="add-cat-btn" onclick="addCategory()">追加</button>
         </div>
       </div>
     </div>
 
-    <!-- ③ 按分設定（デフォルト閉じ）-->
-    <div class="settings-section">
-      <button class="accordion-header" onclick="toggleAccordion(this)">
-        <div class="accordion-title-wrap"><span>📐</span><span class="accordion-title">按分設定（家賃・光熱費・通信費など）</span></div>
-        <span class="accordion-arrow">▼</span>
-      </button>
-      <div class="accordion-body">
-      <div style="padding:4px 0 0">
-        <p style="font-size:12px;color:var(--ink2);margin-bottom:12px;line-height:1.7">
-          自宅兼事務所の費用は「事業で使った割合（按分率）」だけ経費になります。<br>
-          <b>按分率を設定しておくと、入力時に自動で計算されます。</b>
-        </p>
-        <p style="font-size:11px;color:var(--ink3);margin-bottom:14px;padding:8px 10px;background:var(--amber-light);border-radius:8px;border:1px solid rgba(184,134,11,0.2)">
-          ⚠️ 按分率の根拠（部屋の面積・使用時間など）は領収書と一緒に保管してください。
-        </p>
-
-        <!-- 共通按分率 -->
-        <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);">
-          <div class="form-label" style="margin-bottom:8px;font-size:13px;font-weight:700;">🔧 共通按分率（デフォルト）</div>
-          <div class="apportionment-row">
-            <div class="apportionment-label">全科目共通の事業割合</div>
-            <div class="apportionment-input-wrap">
-              <input class="apportionment-input" type="number" id="apport-common" min="0" max="100" placeholder="30" oninput="previewApportionment()">
-              <span class="apportionment-unit">%</span>
-            </div>
-          </div>
-          <div style="font-size:11px;color:var(--ink3)">空欄の科目はこの共通率が使われます</div>
-        </div>
-
-        <!-- 科目別按分率 -->
-        <div class="form-label" style="margin-bottom:8px;font-size:13px;font-weight:700;">📂 科目別に上書き（任意）</div>
-        <div style="font-size:11px;color:var(--ink3);margin-bottom:10px;">空欄 = 共通按分率を使用</div>
-        <div class="apportionment-row">
-          <div class="apportionment-label">🏠 地代家賃</div>
-          <div class="apportionment-input-wrap">
-            <input class="apportionment-input" type="number" id="apport-rent" min="0" max="100" placeholder="共通" oninput="previewApportionment()">
-            <span class="apportionment-unit">%</span>
-          </div>
-        </div>
-        <div class="apportionment-row">
-          <div class="apportionment-label">⚡ 水道光熱費</div>
-          <div class="apportionment-input-wrap">
-            <input class="apportionment-input" type="number" id="apport-utilities" min="0" max="100" placeholder="共通" oninput="previewApportionment()">
-            <span class="apportionment-unit">%</span>
-          </div>
-        </div>
-        <div class="apportionment-row">
-          <div class="apportionment-label">📱 通信費</div>
-          <div class="apportionment-input-wrap">
-            <input class="apportionment-input" type="number" id="apport-comm" min="0" max="100" placeholder="共通" oninput="previewApportionment()">
-            <span class="apportionment-unit">%</span>
-          </div>
-        </div>
-        <div class="apportionment-row" style="margin-bottom:0">
-          <div class="apportionment-label">🚗 車両費</div>
-          <div class="apportionment-input-wrap">
-            <input class="apportionment-input" type="number" id="apport-vehicle" min="0" max="100" placeholder="共通" oninput="previewApportionment()">
-            <span class="apportionment-unit">%</span>
-          </div>
-        </div>
-
-        <!-- プレビュー -->
-        <div id="apport-preview" style="display:none;margin-top:12px;padding:10px 14px;background:var(--green-light);border-radius:var(--radius-sm);border:1px solid rgba(21,128,61,0.2);font-size:12px;color:var(--green);line-height:1.8"></div>
-
-        <button onclick="saveApportionment()" style="margin-top:14px;width:100%;padding:11px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans JP',sans-serif">按分率を保存する</button>
-      </div>
-      </div>
-    </div>
-
-    <!-- ④ 棚卸し（デフォルト閉じ）-->
+    <!-- ③ 棚卸し（デフォルト閉じ）-->
     <div class="settings-section">
       <button class="accordion-header" onclick="toggleAccordion(this)">
         <div class="accordion-title-wrap"><span>📦</span><span class="accordion-title">棚卸し・売上原価</span></div>
@@ -799,8 +687,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
       <div class="accordion-body">
       <div style="padding:4px 0 0">
         <p style="font-size:12px;color:var(--ink2);margin-bottom:14px;line-height:1.6">
-          「仕入高」科目で記録した費用はここで棚卸し精算します。<br>
-          在庫が残る場合は期末在庫を入力して売上原価を確定してください。<br>
+          Boothグッズなどの在庫がある場合に入力。<br>
           <b>売上原価 ＝ 期首 ＋ 仕入 − 期末</b>
         </p>
         <div style="display:grid;gap:10px">
@@ -846,10 +733,10 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
               <label class="form-label">耐用年数（法定耐用年数）</label>
               <div class="years-grid">
                 <button class="years-btn" onclick="setAssetYears(4,'PC・タブレット')">PC・タブレット 4年</button>
-                <button class="years-btn" onclick="setAssetYears(4,'スマホ')">スマホ 4年</button>
-                <button class="years-btn" onclick="setAssetYears(5,'ソフト')">ソフト 5年</button>
+                <button class="years-btn" onclick="setAssetYears(4,'スマートフォン')">スマホ 4年</button>
+                <button class="years-btn" onclick="setAssetYears(5,'ソフトウェア')">ソフト 5年</button>
                 <button class="years-btn" onclick="setAssetYears(5,'カメラ')">カメラ 5年</button>
-                <button class="years-btn" onclick="setAssetYears(8,'机・椅子')">机・椅子 8年</button>
+                <button class="years-btn" onclick="setAssetYears(8,'デスク・椅子')">机・椅子 8年</button>
               </div>
               <input class="form-input" type="number" id="asset-years" placeholder="年数を入力" inputmode="numeric" style="margin-top:6px;max-width:140px" oninput="previewAsset()">
             </div>
@@ -947,12 +834,8 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
       <div class="accordion-body">
         <div class="settings-card">
           <div class="settings-row" onclick="exportCSV()">
-            <div class="settings-row-label">CSVエクスポート（全件）</div>
+            <div class="settings-row-label">CSVエクスポート</div>
             <div class="settings-row-arrow">↓</div>
-          </div>
-          <div style="padding:0 14px 12px;display:flex;gap:8px;align-items:center;">
-            <select id="csv-year-select" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;color:var(--ink);background:var(--surface);font-family:'Noto Sans JP',sans-serif;outline:none;"></select>
-            <button onclick="exportCSVByYear()" style="padding:8px 14px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:700;cursor:pointer;font-family:'Noto Sans JP',sans-serif;white-space:nowrap;">この年を出力</button>
           </div>
         </div>
       </div>
@@ -993,7 +876,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
         <!-- 金額 -->
         <div class="form-group">
           <label class="form-label">金額（円）</label>
-          <input class="form-input amount-input" type="text" id="edit-amount" placeholder="0" inputmode="numeric" oninput="formatAmountInput(this)">
+          <input class="form-input amount-input" type="number" id="edit-amount" placeholder="0" inputmode="numeric">
         </div>
         <!-- 摘要・メモ -->
         <div class="form-row">
@@ -1043,53 +926,18 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 <div class="toast" id="toast"></div>
 
 <!-- ============================================================
-     PWA: Androidおよびデスクトップ用マニフェスト（動的生成）
-     iOSはapple-mobile-web-app-capableメタタグで対応済み。
-     AndroidのChromeでは manifest.json が必要なため blob URL で生成する。
-     ============================================================ -->
-<script>
-(function() {
-  // SVGアイコン（base64）をそのままアイコンとして使用
-  const iconSvg = `<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="192" height="192" rx="40" fill="#1a56db"/><path d="M56 144V80l40-20 40 20v64l-40 20-40-20z" stroke="white" stroke-width="9" fill="none"/><path d="M96 60v80M56 80l40 20 40-20" stroke="white" stroke-width="9"/></svg>`;
-  const iconBlob = new Blob([iconSvg], {type: 'image/svg+xml'});
-  const iconUrl  = URL.createObjectURL(iconBlob);
-
-  // マニフェストを動的生成してlinkタグに注入
-  const manifest = {
-    name:             'RakuThrough',
-    short_name:       'ラクスルー',
-    description:      '青色申告対応の収支管理アプリ',
-    start_url:        './',
-    display:          'standalone',         // ← URLバーを消すキー設定
-    background_color: '#f5f4f0',
-    theme_color:      '#1a56db',
-    lang:             'ja',
-    icons: [
-      { src: iconUrl, sizes: '192x192', type: 'image/svg+xml' },
-      { src: iconUrl, sizes: '512x512', type: 'image/svg+xml' }
-    ]
-  };
-  const blob = new Blob([JSON.stringify(manifest)], {type: 'application/manifest+json'});
-  const link = document.createElement('link');
-  link.rel   = 'manifest';
-  link.href  = URL.createObjectURL(blob);
-  document.head.appendChild(link);
-})();
-</script>
-
-<!-- ============================================================
      Firebase SDK（モジュール形式）
      ============================================================ -->
 <script type="module">
 import { initializeApp }    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, setPersistence, indexedDBLocalPersistence }
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy, setDoc, getDoc, updateDoc }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ====== Firebase設定（変更禁止） ======
 const firebaseConfig = {
-  apiKey:            "AIzaSyBj6Eup01CE1f0jqimiYzgKQHl7IXvO42g",
+  apiKey:            "AIzaSyDAgU1hp2-ay14x-8LcCSAIw_QU-u4xgdk",
   authDomain:        "blue-tax-app.firebaseapp.com",
   projectId:         "blue-tax-app",
   storageBucket:     "blue-tax-app.firebasestorage.app",
@@ -1102,53 +950,27 @@ const auth = getAuth(app);
 const db   = getFirestore(app);
 
 // ============================================================
-// 認証状態の保存先をIndexedDBに明示指定（重要）
-// PWAとChromeブラウザは同じオリジンのIndexedDBを共有するため、
-// ブラウザでログインした認証状態をPWAでも読み取れるようになる。
-// デフォルトのlocalStorageだとPWA/ブラウザ間で共有されない場合がある。
-// ============================================================
-await setPersistence(auth, indexedDBLocalPersistence);
-
-// ============================================================
 // ====== デフォルト勘定科目（Ver.7.0）======
 // ★ クライアントサイドの定数で管理。Firestoreへの書き込みなし。
 // ★ カラーコードは引き継ぎ書 § 4「科目カラー定義（国税庁準拠）」に基づく。
 // ★ 履歴の cat-dot に使用。入力フォームのボタンには色をつけない。
 // ============================================================
 const DEFAULT_CATEGORIES = [
-  // ===== 収入 =====
-  { id: 'sales',       name: '売上高', type: 'income',  emoji: '💴', color: '#1a56db',
-    desc: 'イラスト制作・デザイン・VTuber活動など、事業のメインとなる売上。\n例：Skeb受注料、デザイン制作料、配信収益など' },
-  { id: 'misc-income', name: '雑収入', type: 'income',  emoji: '📈', color: '#0891b2',
-    desc: '売上高以外の収入。事業に付随する小さな収入が対象。\n例：投げ銭、アフィリエイト報酬、補助金など' },
+  // ===== 収入（Ver.9.0: 絵文字アイコン・カラー青系統一）=====
+  { id: 'sales',       name: '売上高', type: 'income',  emoji: '💴', color: '#1a56db' },
+  { id: 'misc-income', name: '雑収入', type: 'income',  emoji: '📈', color: '#0891b2' },
 
   // ===== 経費 =====
-  { id: 'purchase',  name: '仕入高',       type: 'expense', emoji: '🛍️', color: '#1a56db',
-    desc: '同人誌・グッズの印刷費・製造費。在庫が残る場合は棚卸しと連動します。\n設定画面から期末在庫を入力してください。\n例：同人誌印刷費、アクリルグッズ製造費など' },
-  { id: 'outsource', name: '外注費',       type: 'expense', emoji: '👥', color: '#1a56db',
-    desc: '業務の一部を外部に委託した費用。例：イラスト依頼費、動画編集委託費、翻訳費など' },
-  { id: 'comm',      name: '通信費',       type: 'expense', emoji: '📱', color: '#1a56db',
-    desc: 'インターネット・クラウドサービスの利用料。例：Adobe CC、Canva Pro、ネット回線料、携帯代（按分）など' },
-  { id: 'rent',      name: '地代家賃',     type: 'expense', emoji: '🏠', color: '#1a56db',
-    desc: '事務所・自宅の家賃。自宅兼事務所の場合は事業使用割合で按分が必要。\n例：家賃（按分後）、レンタルオフィス代など' },
-  { id: 'utilities', name: '水道光熱費',   type: 'expense', emoji: '⚡', color: '#1a56db',
-    desc: '事業で使用した電気・ガス・水道代。自宅兼事務所の場合は按分が必要。\n例：電気代・ガス代・水道代（作業部屋分）など' },
-  { id: 'vehicle',   name: '車両費',       type: 'expense', emoji: '🚗', color: '#6b6a64',
-    desc: '事業に使用した車の費用。自家用車を事業でも使う場合は按分が必要。\n例：ガソリン代・駐車場代・車検費用（按分後）など' },
-  { id: 'supplies',  name: '消耗品費',     type: 'expense', emoji: '🖊', color: '#6b6a64',
-    desc: '使用可能期間1年未満または10万円未満の備品・消耗品。例：画材、印刷用紙、USBメモリ、タブレットペン先など' },
-  { id: 'travel',    name: '旅費交通費',   type: 'expense', emoji: '🚃', color: '#1a56db',
-    desc: '事業に関連する交通費・宿泊費。例：コミケ・イベント遠征の電車賃、宿泊費、会場への交通費など' },
-  { id: 'books',     name: '書籍・研修費', type: 'expense', emoji: '📚', color: '#1a56db',
-    desc: '事業に必要な知識・スキル習得のための費用。電子書籍も対象。例：技術書、デザイン講座、オンラインセミナー参加費など' },
-  { id: 'ads',       name: '広告宣伝費',   type: 'expense', emoji: '📣', color: '#1a56db',
-    desc: '事業・商品・サービスを宣伝するための費用。例：Twitter/X広告、Pinterest広告、SNS宣伝費など' },
-  { id: 'meeting',   name: '会議費',       type: 'expense', emoji: '☕', color: '#6b6a64',
-    desc: '打ち合わせ・商談に要した飲食・場所代などの費用。\n例：取引先とのカフェ代、打ち合わせ場所のレンタル費など' },
-  { id: 'deprec',    name: '減価償却費',   type: 'expense', emoji: '💻', color: '#6b6a64',
-    desc: '10万円以上の固定資産を耐用年数で分割して経費にしたもの。固定資産登録から自動計算されます。\n例：PC・タブレット・カメラなどの年間償却額' },
-  { id: 'other',     name: 'その他経費',   type: 'expense', emoji: '📋', color: '#6b6a64',
-    desc: '上記のどれにも当てはまらない事業経費。頻繁に使う場合は専用科目の追加を検討してください。\n例：振込手数料、事業用の雑費など' },
+  { id: 'outsource', name: '外注費',       type: 'expense', emoji: '👥', color: '#1a56db' },
+  { id: 'comm',      name: '通信費',       type: 'expense', emoji: '📱', color: '#1a56db' },
+  { id: 'utilities', name: '光熱費',       type: 'expense', emoji: '⚡', color: '#1a56db' },
+  { id: 'supplies',  name: '消耗品費',     type: 'expense', emoji: '🖊', color: '#6b6a64' },
+  { id: 'travel',    name: '旅費交通費',   type: 'expense', emoji: '🚃', color: '#1a56db' },
+  { id: 'books',     name: '書籍・研修費', type: 'expense', emoji: '📚', color: '#1a56db' },
+  { id: 'ads',       name: '広告宣伝費',   type: 'expense', emoji: '📣', color: '#1a56db' },
+  { id: 'meeting',   name: '会議費',       type: 'expense', emoji: '☕', color: '#6b6a64' },
+  { id: 'deprec',    name: '減価償却費',   type: 'expense', emoji: '💻', color: '#6b6a64' },
+  { id: 'other',     name: 'その他経費',   type: 'expense', emoji: '📋', color: '#6b6a64' },
 ];
 
 // ====== アプリ状態 ======
@@ -1164,40 +986,22 @@ let currentFilter       = 'all';
 let currentMonth        = new Date();
 let selectedCategory    = null;
 
-// ====== 按分設定（Ver.9.x新規）======
-// commonRate: 全科目共通の事業割合（%）
-// byCategory: 科目別に上書きする場合のマップ {categoryId: 割合(%)}
-// 按分対象科目: 地代家賃・水道光熱費・通信費・車両費
-const APPORTIONMENT_TARGETS = ['rent', 'utilities', 'comm', 'vehicle'];
-let apportionmentSettings = { commonRate: 0, byCategory: {} };
+// ============================================================
+// ====== メンテナンスモード設定 ======
+// true にするとログイン画面の代わりにメンテナンス中画面を表示します。
+// メンテ完了後は false に戻してデプロイしてください。
+// ============================================================
+const MAINTENANCE_MODE = false;
 
 // ====== AUTH ======
-// ====== リダイレクト結果の受け取り ======
-// signInWithRedirect後にページが戻ってきたとき、ここでログイン完了処理をする
-// エラーは画面に表示してデバッグしやすくする
-function showAuthError(msg) {
-  const el = document.getElementById('auth-error');
-  if (!el) return;
-  el.textContent = '⚠️ ' + msg;
-  el.style.display = 'block';
-}
-try {
-  const result = await getRedirectResult(auth);
-  // resultがnullなら「リダイレクト待ちではない」ので何もしない（正常）
-  // resultがあれば onAuthStateChanged が自動で呼ばれてログイン完了
-} catch(e) {
-  // エラーコードを画面に表示（デバッグ用）
-  if (e?.code && e.code !== 'auth/redirect-cancelled-by-user') {
-    showAuthError('ログインエラー: ' + e.code + '\n' + (e.message || ''));
-  }
-  console.error('getRedirectResult error:', e);
-}
+// メンテナンス中はここで処理を止めて専用画面を出す
+if (MAINTENANCE_MODE) {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('maintenance-screen').style.display = 'flex';
+} else {
 
-// ログイン処理中フラグ
-// 理由：signInWithPopupがiPad/Safariでブロックされた際、signInWithRedirectに
-// フォールバックする瞬間にonAuthStateChanged(null)が発火してログイン画面が
-// 再表示されてしまう（2回押しバグ）のを防ぐ
-let isLoggingIn = false;
+// redirect結果を処理（signInWithRedirectのコールバック）
+try { await getRedirectResult(auth); } catch(e) { console.log('redirect:', e?.code); }
 
 onAuthStateChanged(auth, async (user) => {
   const loadingEl = document.getElementById('loading');
@@ -1232,7 +1036,6 @@ onAuthStateChanged(auth, async (user) => {
     // 表示→読み込みの順だと途中タップで入力ページが空になるバグを防ぐ
     try { await loadCategories(); } catch(e) { console.error('loadCategories:', e); }
     try { await loadTransactions(); } catch(e) { console.error('loadTransactions:', e); }
-    try { await loadApportionment(); } catch(e) { console.error('loadApportionment:', e); }
     // スキーマ移行は独立してtry-catch（失敗してもアプリは動く）
     try { await migrateTransactions(); } catch(e) { console.error('migrateTransactions:', e); }
     // ここで初めて表示 → initEntryForm が必ず実行される
@@ -1246,81 +1049,31 @@ onAuthStateChanged(auth, async (user) => {
     // 保存済みアクセントカラーを復元（プレミアムユーザーのみ）
     restoreAccentColor();
   } else {
-    // ログイン処理中（ポップアップ試行中・リダイレクト中）は再表示しない
-    if (isLoggingIn) return;
     document.getElementById('auth-screen').style.display = 'flex';
     document.getElementById('app').style.display = 'none';
   }
 });
 
 window.loginWithGoogle = async () => {
-  const errEl   = document.getElementById('auth-error');
-  const btnText = document.getElementById('login-btn-text');
-  if (errEl) errEl.style.display = 'none';
-  if (btnText) btnText.textContent = '接続中...';
+  // エラーボックスをリセット
+  const errBox = document.getElementById('login-error');
+  if (errBox) { errBox.textContent = ''; errBox.classList.remove('show'); }
 
-  isLoggingIn = true;
   const provider = new GoogleAuthProvider();
-
-  // ============================================================
-  // 環境別ログイン方式の選択
-  //
-  // ① iOS Safari（PWA含む）
-  //   navigator.standalone === true（PWA）または /iP.../ で判定
-  //   → signInWithRedirect（ポップアップ不可のため）
-  //
-  // ② Android Chrome PWA（スタンドアロンモード）
-  //   display-mode: standalone かつ Android
-  //   → signInWithRedirect でGoogleに飛ぶ
-  //   → 認証後はChromeブラウザで開くが、IndexedDBを共有しているため
-  //     PWAをホーム画面から再度開けばログイン状態が引き継がれる
-  //
-  // ③ Android Chrome 通常ブラウザ / PC
-  //   → signInWithPopup（ポップアップが使える）
-  // ============================================================
-  const isIOS       = /iP(hone|ad|od)/.test(navigator.userAgent);
-  const isIOSPwa    = window.navigator.standalone === true;
-  const isAndroidPwa = !isIOS && window.matchMedia('(display-mode: standalone)').matches;
-
-  if (isIOS || isIOSPwa || isAndroidPwa) {
-    // iOS・Android PWAはリダイレクト方式
-    if (isAndroidPwa) {
-      // Android PWA専用メッセージ：認証後の操作を案内
-      if (errEl) {
-        errEl.style.background = '#e8f0fb';
-        errEl.style.border = '1px solid #93b4f0';
-        errEl.style.color = '#1a56db';
-        errEl.textContent = '📱 Googleのログイン画面が開きます。ログイン完了後、ホーム画面のアプリアイコンをもう一度タップしてください。';
-        errEl.style.display = 'block';
-      }
-    }
-    try { await signInWithRedirect(auth, provider); }
-    catch(e) {
-      isLoggingIn = false;
-      if (btnText) btnText.textContent = 'Googleでログイン';
-      showAuthError('ログインに失敗しました: ' + e.code);
-    }
-    return;
-  }
-
-  // 通常ブラウザ：ポップアップ方式
   try {
+    // まずpopupを試みる（通常のブラウザ・iOS Safari）
     await signInWithPopup(auth, provider);
-    if (btnText) btnText.textContent = 'Googleでログイン';
   } catch(e) {
     if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user') {
+      // popupがブロックされた場合はredirectにフォールバック（Android PWA等）
       try { await signInWithRedirect(auth, provider); }
       catch(e2) {
-        isLoggingIn = false;
-        if (btnText) btnText.textContent = 'Googleでログイン';
-        showAuthError('ログインに失敗しました: ' + e2.code);
+        if (errBox) { errBox.textContent = 'ログインに失敗しました。再度お試しください。'; errBox.classList.add('show'); }
       }
-    } else if (e.code === 'auth/cancelled-popup-request') {
-      if (btnText) btnText.textContent = 'Googleでログイン';
     } else {
-      isLoggingIn = false;
-      if (btnText) btnText.textContent = 'Googleでログイン';
-      showAuthError('ログインに失敗しました: ' + e.code + '\n' + (e.message || ''));
+      // その他エラーはエラーボックスに表示
+      if (errBox) { errBox.textContent = 'ログインエラー: ' + (e.code || e.message); errBox.classList.add('show'); }
+      console.error(e);
     }
   }
 };
@@ -1329,6 +1082,8 @@ document.getElementById('login-btn').onclick = window.loginWithGoogle;
 window.logout = async () => {
   if (confirm('ログアウトしますか？')) await signOut(auth);
 };
+
+} // end: MAINTENANCE_MODE === false
 
 // ====== Firestoreヘルパー ======
 function userCol(name) {
@@ -1458,28 +1213,19 @@ async function loadCategories() {
 
 // カスタム科目の追加（カスタムのみFirestoreへ保存）
 window.addCategory = async () => {
-  const nameEl = document.getElementById('new-cat-name');
-  const typeEl = document.getElementById('new-cat-type');
-  if (!nameEl || !typeEl) { showToast('入力欄が見つかりません'); return; }
-  const name = nameEl.value.trim();
-  const type = typeEl.value;
+  const name = document.getElementById('new-cat-name').value.trim();
+  const type = document.getElementById('new-cat-type').value;
   if (!name) { showToast('科目名を入力してください'); return; }
   const id  = 'cat_' + Date.now();
-  // desc：入力フォームの科目説明欄に表示するテキスト（ないとエラーになる）
-  const cat = { id, name, type, emoji: type === 'income' ? '💰' : '📋', color: '#6b7280', desc: name + 'として記録する科目です。' };
+  const cat = { id, name, type, emoji: type === 'income' ? '💰' : '📋', color: '#6b7280' };
   try {
-    await setDoc(doc(db, 'users', currentUser.uid, 'categories', id),
-      { name, type, emoji: cat.emoji, color: cat.color, desc: cat.desc });
+    await setDoc(doc(db, 'users', currentUser.uid, 'categories', id), { name, type, emoji: cat.emoji, color: cat.color });
     categories.push(cat);
-    const list = document.getElementById('cat-manage-list');
-    if (list) renderCategoryManage(); // nullガード：要素がある場合のみ再描画
+    renderCategoryManage();
     initEntryForm();
-    nameEl.value = '';
-    showToast('「' + name + '」を追加しました');
-  } catch(e) {
-    console.error('addCategory error:', e); // 原因特定用ログ
-    showToast('追加に失敗しました：' + (e.message || e));
-  }
+    document.getElementById('new-cat-name').value = '';
+    showToast('追加しました');
+  } catch(e) { showToast('エラーが発生しました'); }
 };
 
 // 科目削除（デフォルト科目は削除不可）
@@ -1511,11 +1257,9 @@ window.setEntryType = (type) => {
   currentEntryType = type;
   document.getElementById('btn-income').className  = 'type-btn' + (type === 'income'  ? ' active-income'  : '');
   document.getElementById('btn-expense').className = 'type-btn' + (type === 'expense' ? ' active-expense' : '');
-  // 源泉ボタン・源泉?ボタン・源泉説明は収入タブのみ（経費には不要なので非表示）
+  // 源泉ボタン・源泉説明は収入タブのみ
   const wb = document.getElementById('withholding-btn');
   if (wb) wb.style.display = type === 'income' ? '' : 'none';
-  const gt = document.getElementById('gensen-tip-btn');
-  if (gt) gt.style.display = type === 'income' ? '' : 'none';
   const gwrap = document.getElementById('gensen-help-wrap');
   if (gwrap) gwrap.style.display = type === 'income' ? '' : 'none';
   if (type === 'expense') resetWithholding();
@@ -1528,24 +1272,14 @@ window.setEntryType = (type) => {
   const gh = document.getElementById('gensen-help-wrap');
   if (gh) gh.style.display = type === 'income' ? '' : 'none';
   selectedCategory = null;
-  // 科目説明文をリセット
-  const descBox = document.getElementById('cat-desc-box');
-  if (descBox) descBox.style.display = 'none';
   initEntryForm();
-  // 支払い・口座のseg-btnを収入=青・経費=赤に切り替え
-  const expenseMode = (type === 'expense');
-  document.querySelectorAll('.seg-btn.seg-on, .seg-btn.seg-on-red').forEach(btn => {
-    btn.classList.toggle('seg-on',     !expenseMode);
-    btn.classList.toggle('seg-on-red',  expenseMode);
-  });
 };
 
 // 個人/事業スイッチ（Ver.7.0新規）
 window.setWallet = (walletType) => {
   currentWalletType = walletType;
-  const _wc = currentEntryType === 'expense' ? ' seg-on-red' : ' seg-on';
-  document.getElementById('btn-wallet-personal').className = 'seg-btn' + (walletType === 'personal' ? _wc : '');
-  document.getElementById('btn-wallet-business').className = 'seg-btn' + (walletType === 'business' ? _wc : '');
+  document.getElementById('btn-wallet-personal').className = 'seg-btn' + (walletType === 'personal' ? ' seg-on' : '');
+  document.getElementById('btn-wallet-business').className = 'seg-btn' + (walletType === 'business' ? ' seg-on' : '');
   // ヒントテキストを更新
   const hint = document.getElementById('wallet-hint');
   if (hint) {
@@ -1568,17 +1302,15 @@ window.setEntryStatus = (status) => {
 // 支払い方法
 window.setPayment = (method) => {
   currentPayment = method;
-  const _pc = currentEntryType === 'expense' ? ' seg-on-red' : ' seg-on';
-  document.getElementById('btn-cash').className = 'seg-btn' + (method === 'cash' ? _pc : '');
-  document.getElementById('btn-card').className = 'seg-btn' + (method === 'card' ? _pc : '');
+  document.getElementById('btn-cash').className = 'seg-btn' + (method === 'cash' ? ' seg-on' : '');
+  document.getElementById('btn-card').className = 'seg-btn' + (method === 'card' ? ' seg-on' : '');
 };
 
 // フォーム初期化（タブ切り替え時）
 function initEntryForm() {
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('entry-date').value = today;
-  // setPaymentはcurrentEntryTypeを見て色を決めるので順番が重要
-  setPayment(currentPayment || 'cash');
+  setPayment('cash');
   renderCategoryGrid();
 }
 
@@ -1589,9 +1321,11 @@ function renderCategoryGrid() {
   const src = (categories && categories.length > 0) ? categories : DEFAULT_CATEGORIES;
   const filtered = src.filter(c => c.type === currentEntryType);
   grid.innerHTML = filtered.map(cat => {
-    // アイコン：絵文字を優先。Material Iconsは Safari で動かないため使用しない
-    const icon = cat.emoji || cat.icon || '📋';
-    const iconHtml = `<span style="font-size:14px;line-height:1;">${icon}</span>`;
+    const icon = cat.icon || cat.emoji || 'label';
+    const isEmoji = icon.length > 2; // 絵文字かMaterial Iconかの判定
+    const iconHtml = isEmoji
+      ? `<span style="font-size:13px;">${icon}</span>`
+      : `<span class="material-icons" style="font-size:14px;vertical-align:-2px;">${icon}</span>`;
     const sel = selectedCategory === cat.id;
     return `<button class="cat-btn${sel ? ' selected' : ''}"
        style="${sel ? 'background:var(--accent);color:#fff;border-color:var(--accent);' : ''}"
@@ -1602,25 +1336,11 @@ function renderCategoryGrid() {
 window.selectCategory = (id) => {
   selectedCategory = id;
   renderCategoryGrid();
-  // 選択した科目の説明文を表示
-  const src = (categories && categories.length > 0) ? categories : DEFAULT_CATEGORIES;
-  const cat = src.find(c => c.id === id);
-  const box = document.getElementById('cat-desc-box');
-  if (box && cat?.desc) {
-    box.textContent = cat.desc;
-    box.style.display = 'block';
-    // 経費モードは赤border
-    box.classList.toggle('expense-mode', currentEntryType === 'expense');
-  } else if (box) {
-    box.style.display = 'none';
-  }
-  // 按分対象科目の場合、プレビューを更新
-  updateApportionPreview();
 };
 
 // ====== 取引の保存（Ver.7.0: 新フィールド追加）======
 window.submitEntry = async () => {
-  const amount = parseAmountVal(document.getElementById('entry-amount').value);
+  const amount = parseInt(document.getElementById('entry-amount').value);
   const desc   = document.getElementById('entry-desc').value.trim();
   const date   = document.getElementById('entry-date').value;
   const memo   = document.getElementById('entry-memo').value.trim();
@@ -1633,23 +1353,10 @@ window.submitEntry = async () => {
   // 摘要が空ならカテゴリ名をそのまま使う（爆速入力対応）
   const finalDesc = desc || cat?.name || '';
 
-  // ===== 按分処理（Ver.9.x新規）=====
-  // 経費 × 按分対象科目の場合、元金額を按分率で割り引いて保存する
-  let finalAmount = amount; // 保存する実際の金額
-  let apportionMemo = '';   // メモに追記する按分情報
-  if (currentEntryType === 'expense') {
-    const rate = getApportionRate(selectedCategory);
-    if (rate > 0) {
-      const beforeAmount = amount;
-      finalAmount = Math.round(amount * rate / 100);
-      apportionMemo = `（按分前：¥${beforeAmount.toLocaleString()} / ${rate}%）`;
-    }
-  }
-
-  // 源泉徴収の計算（按分後の金額に適用）
+  // 源泉徴収の計算
   const withholdingOn  = document.getElementById('withholding-btn')?.classList.contains('active');
-  const grossAmount    = withholdingOn ? Math.round(finalAmount / (1 - 0.1021)) : finalAmount;
-  const withholdingTax = withholdingOn ? grossAmount - finalAmount : 0;
+  const grossAmount    = withholdingOn ? Math.round(amount / (1 - 0.1021)) : amount;
+  const withholdingTax = withholdingOn ? grossAmount - amount : 0;
 
   // 複式簿記の自動仕訳（ユーザー入力から生成）
   const debit  = autoDebit (currentEntryType, currentWalletType, currentEntryStatus, cat?.name || '');
@@ -1661,9 +1368,8 @@ window.submitEntry = async () => {
     // 基本フィールド
     type:         currentEntryType,
     amount:       grossAmount,
-    receivedAmount: finalAmount,
-    desc: finalDesc, date,
-    memo: apportionMemo ? (memo ? memo + '　' + apportionMemo : apportionMemo) : memo,
+    receivedAmount: amount,
+    desc: finalDesc, date, memo,
     categoryId:   selectedCategory,
     categoryName: cat?.name || '',
     // 源泉徴収
@@ -1902,7 +1608,7 @@ window.openEditModal = (id) => {
   const tx = allTransactions.find(t => t.id === id);
   if (!tx) return;
   document.getElementById('edit-tx-id').value  = id;
-  document.getElementById('edit-amount').value = tx.amount ? parseInt(tx.amount).toLocaleString('ja-JP') : '';
+  document.getElementById('edit-amount').value = tx.amount;
   document.getElementById('edit-desc').value   = tx.desc || '';
   document.getElementById('edit-date').value   = tx.date;
   document.getElementById('edit-memo').value   = tx.memo || '';
@@ -1973,7 +1679,7 @@ window.selectEditCategory = (id) => {
 
 window.saveEdit = async () => {
   const id     = document.getElementById('edit-tx-id').value;
-  const amount = parseAmountVal(document.getElementById('edit-amount').value);
+  const amount = parseInt(document.getElementById('edit-amount').value);
   const date   = document.getElementById('edit-date').value;
   const memo   = document.getElementById('edit-memo').value.trim();
   if (!amount || amount <= 0) { showToast('金額を入力してください'); return; }
@@ -2026,21 +1732,6 @@ window.showPage = (name) => {
   if (name === 'settings') { renderCategoryManage(); loadInventory(); loadAssets(); }
 };
 
-// ====== 金額入力フォーマット（カンマ区切り）======
-// 入力中にリアルタイムで ¥1,000 形式にフォーマットする
-// type="text" + inputmode="numeric" で iOS カーソルも維持できる
-window.formatAmountInput = (input) => {
-  // 数字以外を取り除いて純粋な数値文字列を取得
-  const raw = input.value.replace(/[^0-9]/g, '');
-  // 空なら空にする。数字があればカンマ付きに変換
-  input.value = raw ? parseInt(raw, 10).toLocaleString('ja-JP') : '';
-};
-
-// カンマ付き文字列から数値を取り出すヘルパー
-function parseAmountVal(str) {
-  return parseInt(String(str).replace(/,/g, ''), 10) || 0;
-}
-
 // ====== 源泉徴収の計算 ======
 // 源泉率：10.21%（所得税10% + 復興特別所得税0.21%）
 let isWithholding = false;
@@ -2053,7 +1744,7 @@ window.toggleWithholding = () => {
 
 window.calcWithholding = () => {
   if (!isWithholding) return;
-  const received = parseAmountVal(document.getElementById('entry-amount').value);
+  const received = parseInt(document.getElementById('entry-amount').value) || 0;
   if (received <= 0) { document.getElementById('withholding-result').classList.remove('show'); return; }
   const gross  = Math.round(received / (1 - 0.1021));
   const tax    = gross - received;
@@ -2113,46 +1804,6 @@ async function loadInventory() {
 }
 
 // ====== CSVエクスポート（Ver.7.0: walletType / status 列を追加）======
-// ===== CSV年度セレクト初期化 =====
-function initCsvYearSelect() {
-  const sel = document.getElementById('csv-year-select');
-  if (!sel) return;
-  sel.innerHTML = '';
-  const now = new Date().getFullYear();
-  for (let y = now; y >= now - 5; y--) {
-    const o = document.createElement('option');
-    o.value = y;
-    o.textContent = `${y}年（${y}/1/1〜${y}/12/31）`;
-    if (y === now) o.selected = true;
-    sel.appendChild(o);
-  }
-}
-
-// ===== 年度指定CSV出力 =====
-window.exportCSVByYear = () => {
-  const year = parseInt(document.getElementById('csv-year-select')?.value || new Date().getFullYear());
-  const filtered = allTransactions.filter(t => t.date >= `${year}-01-01` && t.date <= `${year}-12-31`);
-  if (!filtered.length) { showToast(`${year}年のデータがありません`); return; }
-  const pending = filtered.filter(t => t.status === 'pending');
-  if (pending.length) {
-    const total = pending.reduce((s,t) => s+t.amount, 0);
-    if (!confirm(`📌 売掛（未入金）が${pending.length}件（¥${total.toLocaleString()}）あります。\nそのまま出力しますか？`)) return;
-  }
-  const header = '日付,種別,摘要,勘定科目,金額,支払い方法,財布区分,入金状態,借方,貸方,メモ\n';
-  const rows = filtered.map(t => {
-    const pm = t.paymentMethod || t.payment || 'cash';
-    const wt = t.walletType === 'business' ? '事業' : '個人';
-    const st = t.status === 'pending' ? '売掛' : '入金済';
-    return `${t.date},${t.type==='income'?'収入':'経費'},"${t.desc}","${t.categoryName}",${t.amount},${pm==='card'?'クレカ':'現金・振込'},${wt},${st},"${t.debit?.account||''}","${t.credit?.account||''}","${t.memo||''}"`;
-  }).join('\n');
-  const blob = new Blob(['\uFEFF' + header + rows], {type:'text/csv;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `RakuThrough_${year}.csv`; a.click();
-  URL.revokeObjectURL(url);
-  showToast(`${year}年のCSVをダウンロードしました（${filtered.length}件）`);
-};
-
 window.exportCSV = () => {
   if (!allTransactions.length) { showToast('取引データがありません'); return; }
   // CSV出力前に未入金（売掛）の取引があれば確認を促す
@@ -2198,15 +1849,8 @@ function getTextColor(hex) {
 
 // アクセントカラーを適用する
 window.applyAccentColor = async (hex) => {
-  // 個人利用フェーズのためisPremiumチェックを一時解除
-  // if (!window.isPremium) return;
+  if (!window.isPremium) return;
   document.documentElement.style.setProperty('--accent', hex);
-  // accent-lightをaccentの薄い版として自動計算
-  const r = parseInt(hex.slice(1,3),16);
-  const g = parseInt(hex.slice(3,5),16);
-  const b = parseInt(hex.slice(5,7),16);
-  document.documentElement.style.setProperty('--accent-light', `rgba(${r},${g},${b},0.12)`);
-  document.documentElement.style.setProperty('--accent-mid', hex); // ホバー色も統一
   const textColor = getTextColor(hex);
   // サマリーカード内テキストなど濃い背景上の文字色を調整
   document.documentElement.style.setProperty('--on-accent', textColor);
@@ -2231,9 +1875,7 @@ window.applyAccentColor = async (hex) => {
 
 // ログイン後にFirestoreから保存済みカラーを復元
 async function restoreAccentColor() {
-  if (!currentUser) return;
-  // 個人利用フェーズのためisPremiumチェックを一時解除
-  // if (!window.isPremium) return;
+  if (!currentUser || !window.isPremium) return;
   try {
     const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
     const snap = await getDoc(doc(db, 'users', currentUser.uid, 'settings', 'theme'));
@@ -2263,7 +1905,7 @@ document.addEventListener('click', e => {
 // ====== テーマ切り替え ======
 const THEMES = ['default', 'polkadot', 'stripe', 'neko'];
 window.setTheme = (name) => {
-  document.documentElement.setAttribute('data-theme', name);
+  document.body.setAttribute('data-theme', name);
   localStorage.setItem('raku-theme', name);
   THEMES.forEach(t => {
     document.getElementById('theme-btn-' + t)?.classList.toggle('active', t === name);
@@ -2312,98 +1954,7 @@ window.showToast = (msg) => {
 };
 
 // ============================================================
-// ====== 按分設定（Ver.9.x）======
-// 対象科目：地代家賃(rent) / 水道光熱費(utilities) / 通信費(comm) / 車両費(vehicle)
-// Firestoreの users/{uid}/settings/apportionment に保存する。
-// ============================================================
-
-// 按分設定をFirestoreから読み込む
-async function loadApportionment() {
-  if (!currentUser) return;
-  try {
-    const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    const snap = await getDoc(doc(db, 'users', currentUser.uid, 'settings', 'apportionment'));
-    if (snap.exists()) {
-      apportionmentSettings = snap.data();
-    }
-    // 設定フォームの値を復元
-    const el = document.getElementById('apport-common');
-    if (el) el.value = apportionmentSettings.commonRate || '';
-    ['rent','utilities','comm','vehicle'].forEach(id => {
-      const input = document.getElementById('apport-' + id);
-      if (input) input.value = apportionmentSettings.byCategory?.[id] ?? '';
-    });
-  } catch(e) { console.error('按分設定読み込み失敗:', e); }
-}
-
-// 按分設定をFirestoreへ保存する
-window.saveApportionment = async () => {
-  const commonRate = parseInt(document.getElementById('apport-common')?.value) || 0;
-  const byCategory = {};
-  ['rent','utilities','comm','vehicle'].forEach(id => {
-    const val = document.getElementById('apport-' + id)?.value;
-    if (val !== '' && val !== undefined && !isNaN(parseInt(val))) {
-      byCategory[id] = parseInt(val);
-    }
-  });
-  apportionmentSettings = { commonRate, byCategory, updatedAt: new Date().toISOString() };
-  try {
-    const { doc, setDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    await setDoc(
-      doc(db, 'users', currentUser.uid, 'settings', 'apportionment'),
-      apportionmentSettings,
-      { merge: true }
-    );
-    showToast('✅ 按分設定を保存しました');
-    previewApportionment(); // 設定画面のプレビューも更新
-  } catch(e) { showToast('保存に失敗しました'); console.error(e); }
-};
-
-// 設定タブのプレビュー（どの科目が何%か一覧表示）
-window.previewApportionment = () => {
-  const commonRate = parseInt(document.getElementById('apport-common')?.value) || 0;
-  const preview = document.getElementById('apport-preview');
-  if (!preview) return;
-  const catMap = { rent:'地代家賃', utilities:'水道光熱費', comm:'通信費', vehicle:'車両費' };
-  let lines = [];
-  ['rent','utilities','comm','vehicle'].forEach(id => {
-    const val = document.getElementById('apport-' + id)?.value;
-    const rate = (val !== '' && !isNaN(parseInt(val))) ? parseInt(val) : commonRate;
-    if (rate > 0) lines.push(`${catMap[id]}：${rate}%`);
-  });
-  if (lines.length) {
-    preview.innerHTML = '📐 入力時の按分率：' + lines.join('　');
-    preview.style.display = 'block';
-  } else {
-    preview.style.display = 'none';
-  }
-};
-
-// 按分率を取得する（科目別 → 共通率の順で参照）
-function getApportionRate(categoryId) {
-  if (!APPORTIONMENT_TARGETS.includes(categoryId)) return null; // 対象外
-  const byRate = apportionmentSettings.byCategory?.[categoryId];
-  if (byRate !== undefined && byRate !== null) return byRate;
-  return apportionmentSettings.commonRate || 0;
-}
-
-// 入力フォームの按分プレビューを更新する
-// 「経費 × 按分対象科目 × 金額入力済み」のときのみ表示
-window.updateApportionPreview = () => {
-  const box = document.getElementById('apportionment-preview');
-  if (!box) return;
-  if (currentEntryType !== 'expense' || !selectedCategory) { box.classList.remove('show'); return; }
-  const rate = getApportionRate(selectedCategory);
-  if (!rate || rate <= 0) { box.classList.remove('show'); return; }
-  const rawAmt = parseAmountVal(document.getElementById('entry-amount')?.value || '0');
-  if (!rawAmt || rawAmt <= 0) { box.classList.remove('show'); return; }
-  const after = Math.round(rawAmt * rate / 100);
-  box.innerHTML = `📐 <b>按分後の経費額：¥${after.toLocaleString()}</b>（${rate}%）<br>
-    <span style="font-size:11px">¥${rawAmt.toLocaleString()} × ${rate}% ＝ ¥${after.toLocaleString()}　として保存されます</span>`;
-  box.classList.add('show');
-};
-
-
+// ====== 固定資産・減価償却管理 ======
 // 【2026年税制改正対応】少額特例：40万円未満（2028年3月末まで）
 // 出典：国税庁 No.5408 / 弥生公式サイト（2025年12月）
 // ⚠️ 改正される可能性あり。確定申告前に必ず国税庁公式サイトで確認すること。
@@ -2412,7 +1963,7 @@ window.updateApportionPreview = () => {
 window.setAssetYears = (years, label) => {
   document.getElementById('asset-years').value = years;
   document.querySelectorAll('.years-btn').forEach(b => {
-    b.classList.toggle('active', b.textContent.trim().includes(label));
+    b.classList.toggle('active', b.textContent.includes(label));
   });
   previewAsset();
 };
