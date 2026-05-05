@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" data-theme="default">
+<html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
@@ -62,9 +62,6 @@
   --pattern: none; --pattern-size: auto;
 }
 
-/* htmlタグにもbg色を当てる（PWA灰色帯バグ修正）*/
-html { background-color: var(--bg); }
-
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
 /* body: background-colorとbackground-imageを分けて書く（shorthandだとpatternが消えるバグ対策）*/
@@ -86,25 +83,14 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading-text { font-size: 13px; color: var(--ink2); }
 
-/* ===== AUTH画面（フルスクリーン固定）===== */
-#auth-screen { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; background: var(--bg); z-index: 50; }
+/* ===== AUTH画面 ===== */
+#auth-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; background: var(--bg); }
 .auth-logo { width: 64px; height: 64px; background: var(--accent); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; }
 .auth-logo svg { width: 32px; height: 32px; }
 .auth-sub { font-size: 14px; color: var(--ink2); text-align: center; margin-bottom: 40px; line-height: 1.6; }
 .google-btn { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 24px; font-size: 15px; font-weight: 500; color: var(--ink); cursor: pointer; width: 100%; max-width: 300px; transition: background 0.15s, transform 0.1s; }
 .google-btn:hover { background: var(--surface2); }
 .google-btn:active { transform: scale(0.98); }
-
-/* ログインエラーボックス */
-.login-error { display: none; margin-top: 12px; padding: 10px 16px; background: #fdf0ee; border: 1px solid #c0392b; border-radius: var(--radius-sm); color: #c0392b; font-size: 13px; text-align: center; width: 100%; max-width: 300px; }
-.login-error.show { display: block; }
-
-/* ===== メンテナンス中画面 ===== */
-#maintenance-screen { position: fixed; inset: 0; background: var(--bg); display: none; flex-direction: column; align-items: center; justify-content: center; padding: 40px 24px; z-index: 200; }
-.maint-icon { font-size: 64px; margin-bottom: 24px; }
-.maint-title { font-family: 'Nunito', sans-serif; font-weight: 900; font-size: 28px; color: var(--accent); margin-bottom: 8px; }
-.maint-sub { font-size: 15px; color: var(--ink2); text-align: center; line-height: 1.8; margin-bottom: 24px; }
-.maint-badge { display: inline-block; background: var(--amber-light); color: var(--amber); border: 1px solid var(--amber); border-radius: 20px; padding: 6px 18px; font-size: 13px; font-weight: 600; }
 
 /* ===== メインアプリ ===== */
 #app { display: none; }
@@ -406,23 +392,12 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 
 </style>
 </head>
-<body>
+<body data-theme="default">
 
 <!-- ローディング画面 -->
 <div class="loading-overlay" id="loading">
   <div class="spinner"></div>
   <div class="loading-text">読み込み中...</div>
-</div>
-
-<!-- ============================================================
-     メンテナンス中画面
-     表示切り替えはJSの MAINTENANCE_MODE フラグで制御
-     ============================================================ -->
-<div id="maintenance-screen">
-  <div class="maint-icon">🛠️</div>
-  <div class="maint-title">RakuThrough</div>
-  <div class="maint-sub">ただいまメンテナンス中です。<br>ご不便をおかけして申し訳ありません。<br>しばらく時間をおいてアクセスしてください。</div>
-  <div class="maint-badge">⏰ メンテナンス中</div>
 </div>
 
 <!-- 認証画面 -->
@@ -447,8 +422,6 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     </svg>
     Googleでログイン
   </button>
-  <!-- ログインエラー表示ボックス -->
-  <div class="login-error" id="login-error"></div>
 </div>
 
 <!-- メインアプリ -->
@@ -986,21 +959,7 @@ let currentFilter       = 'all';
 let currentMonth        = new Date();
 let selectedCategory    = null;
 
-// ============================================================
-// ====== メンテナンスモード設定 ======
-// true にするとログイン画面の代わりにメンテナンス中画面を表示します。
-// メンテ完了後は false に戻してデプロイしてください。
-// ============================================================
-const MAINTENANCE_MODE = false;
-
 // ====== AUTH ======
-// メンテナンス中はここで処理を止めて専用画面を出す
-if (MAINTENANCE_MODE) {
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('maintenance-screen').style.display = 'flex';
-} else {
-
-// redirect結果を処理（signInWithRedirectのコールバック）
 try { await getRedirectResult(auth); } catch(e) { console.log('redirect:', e?.code); }
 
 onAuthStateChanged(auth, async (user) => {
@@ -1055,25 +1014,15 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 window.loginWithGoogle = async () => {
-  // エラーボックスをリセット
-  const errBox = document.getElementById('login-error');
-  if (errBox) { errBox.textContent = ''; errBox.classList.remove('show'); }
-
   const provider = new GoogleAuthProvider();
   try {
-    // まずpopupを試みる（通常のブラウザ・iOS Safari）
     await signInWithPopup(auth, provider);
   } catch(e) {
     if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user') {
-      // popupがブロックされた場合はredirectにフォールバック（Android PWA等）
       try { await signInWithRedirect(auth, provider); }
-      catch(e2) {
-        if (errBox) { errBox.textContent = 'ログインに失敗しました。再度お試しください。'; errBox.classList.add('show'); }
-      }
+      catch(e2) { showToast('ログインに失敗しました'); }
     } else {
-      // その他エラーはエラーボックスに表示
-      if (errBox) { errBox.textContent = 'ログインエラー: ' + (e.code || e.message); errBox.classList.add('show'); }
-      console.error(e);
+      showToast('ログインに失敗しました: ' + e.code);
     }
   }
 };
@@ -1082,8 +1031,6 @@ document.getElementById('login-btn').onclick = window.loginWithGoogle;
 window.logout = async () => {
   if (confirm('ログアウトしますか？')) await signOut(auth);
 };
-
-} // end: MAINTENANCE_MODE === false
 
 // ====== Firestoreヘルパー ======
 function userCol(name) {
