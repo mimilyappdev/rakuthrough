@@ -210,7 +210,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .withholding-result.show { display: block; }
 
 /* 科目グリッド（入力時：色なし）*/
-.category-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.category-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .cat-btn { padding: 8px 4px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface); font-size: 11px; font-weight: 500; color: var(--ink2); cursor: pointer; text-align: center; transition: all 0.15s; font-family: 'Noto Sans JP', sans-serif; line-height: 1.3; }
 .cat-btn.selected { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
 
@@ -500,26 +500,9 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     </div>
 
     <div class="form-card">
-      <!-- ① 個人/事業スイッチ（Ver.8.0: ラベル刷新・❓ツールチップ）-->
-      <div class="form-group" style="margin-bottom:10px;">
-        <label class="form-label">個人・事業とは？<button class="tip-btn" onclick="toggleTip(this)">?<span class="tip-box">個人：自分の財布・個人口座から支払い。事業：事業専用口座から支払い。複式簿記の自動仕訳に使います。</span></button></label>
-        <div class="seg-toggle">
-          <button class="seg-btn seg-on" id="btn-wallet-personal" onclick="setWallet('personal')">
-            <span class="seg-main">個人</span>
-          </button>
-          <button class="seg-btn" id="btn-wallet-business" onclick="setWallet('business')">
-            <span class="seg-main">事業</span>
-          </button>
-        </div>
-      </div>
-
       <!-- ② 金額 + 源泉ボタン（収入時のみ）-->
       <div class="form-group">
-        <label class="form-label">金額（円）</label>
-        <!-- 源泉説明：源泉ボタンの上に配置・収入タブのみ表示 -->
-        <div id="gensen-help-wrap" style="margin-bottom:5px;">
-          <button class="tip-btn" onclick="toggleTip(this)">? 源泉徴収とは<span class="tip-box">クライアントから支払われる前に税金（10.21%）が引かれる仕組みです。請求書に源泉徴収がある場合は「源泉」ボタンをオンにしてください。</span></button>
-        </div>
+        <label class="form-label">金額（円）<span id="gensen-help-wrap"><button class="tip-btn" onclick="toggleTip(this)">? 源泉徴収とは<span class="tip-box">クライアントから支払われる前に税金（10.21%）が引かれる仕組みです。請求書に源泉徴収がある場合は「源泉」ボタンをオンにしてください。</span></button></span></label>
         <div class="amount-row">
           <input class="form-input amount-input" type="number" id="entry-amount" placeholder="0" inputmode="numeric" oninput="calcWithholding()">
           <button class="withholding-btn" id="withholding-btn" onclick="toggleWithholding()">源泉</button>
@@ -838,14 +821,6 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
         <button class="type-btn" id="edit-btn-expense" onclick="setEditType('expense')">－ 経費</button>
       </div>
       <div class="form-card">
-        <!-- 個人/事業スイッチ -->
-        <div class="form-group">
-          <label class="form-label">💼 どちらの財布？</label>
-          <div class="wallet-toggle">
-            <button class="wallet-btn" id="edit-btn-wallet-personal" onclick="setEditWallet('personal')">👤 個人</button>
-            <button class="wallet-btn" id="edit-btn-wallet-business" onclick="setEditWallet('business')">🏦 事業</button>
-          </div>
-        </div>
         <!-- 金額 -->
         <div class="form-group">
           <label class="form-label">金額（円）</label>
@@ -952,7 +927,7 @@ let allTransactions     = [];
 let categories          = [...DEFAULT_CATEGORIES];
 let allAssets           = [];
 let currentEntryType    = 'income';   // 入力タブ：収入/経費
-let currentWalletType   = 'personal'; // Ver.7.0新規：個人/事業
+const currentWalletType = 'personal'; // 個人固定（事業口座なしモデル）
 let currentEntryStatus  = 'settled';  // Ver.7.0新規：入金済み/売掛
 let currentPayment      = 'cash';     // 支払い方法：現金・振込/クレカ
 let currentFilter       = 'all';
@@ -962,7 +937,22 @@ let selectedCategory    = null;
 // ====== AUTH ======
 try { await getRedirectResult(auth); } catch(e) { console.log('redirect:', e?.code); }
 
+// ===== DEV BYPASS: URLに ?dev=1 を付けるとログインをスキップ =====
+const DEV_MODE = new URLSearchParams(location.search).get('dev') === '1';
+if (DEV_MODE) {
+  currentUser = { uid: 'dev-user', email: 'dev@local', displayName: 'Dev' };
+  window.isPremium = true;
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  categories = [...DEFAULT_CATEGORIES];
+  renderCategoryManage();
+  requestAnimationFrame(() => { initEntryForm(); updateHome(); });
+}
+// ===== DEV BYPASS END =====
+
 onAuthStateChanged(auth, async (user) => {
+  if (DEV_MODE) return;
   const loadingEl = document.getElementById('loading');
   loadingEl.style.opacity = '0';
   loadingEl.style.pointerEvents = 'none';
@@ -1043,10 +1033,10 @@ function userCol(name) {
 // 既存データは全件 settled / personal にデフォルト設定
 // ============================================================
 async function migrateTransactions() {
-  // 未移行データを抽出（walletType がない = 旧スキーマ）
-  const targets = allTransactions.filter(tx => tx.walletType === undefined);
+  // fiscalYear 未設定のデータも移行対象に含める
+  const targets = allTransactions.filter(tx => tx.walletType === undefined || tx.fiscalYear === undefined);
   if (!targets.length) {
-    console.log('✅ スキーマ移行不要（全データがVer.7.0済み）');
+    console.log('✅ スキーマ移行不要（全データが最新済み）');
     return;
   }
   console.log(`🔄 ${targets.length}件をVer.7.0スキーマに移行中...`);
@@ -1067,6 +1057,11 @@ async function migrateTransactions() {
     // debit / credit: 移行時の自動仕訳（後から手動編集可能）
     updates.debit  = autoDebit(tx.type, 'personal', 'settled', tx.categoryName || '');
     updates.credit = autoCredit(tx.type, 'personal', tx.categoryName || '');
+
+    // fiscalYear: date フィールドから年度を補完
+    if (tx.fiscalYear === undefined && tx.date) {
+      updates.fiscalYear = parseInt(tx.date.slice(0, 4));
+    }
 
     try {
       await updateDoc(
@@ -1222,19 +1217,8 @@ window.setEntryType = (type) => {
   initEntryForm();
 };
 
-// 個人/事業スイッチ（Ver.7.0新規）
-window.setWallet = (walletType) => {
-  currentWalletType = walletType;
-  document.getElementById('btn-wallet-personal').className = 'seg-btn' + (walletType === 'personal' ? ' seg-on' : '');
-  document.getElementById('btn-wallet-business').className = 'seg-btn' + (walletType === 'business' ? ' seg-on' : '');
-  // ヒントテキストを更新
-  const hint = document.getElementById('wallet-hint');
-  if (hint) {
-    hint.textContent = walletType === 'personal'
-      ? '👤 個人：仕訳は「事業主借/事業主貸」を自動生成します'
-      : '🏦 事業：仕訳は「普通預金」を自動生成します';
-  }
-};
+// 個人/事業スイッチ（個人固定・関数は互換性のため残す）
+window.setWallet = () => {};
 
 // 入金ステータス（Ver.7.0新規）
 window.setEntryStatus = (status) => {
@@ -1329,6 +1313,7 @@ window.submitEntry = async () => {
     debit, credit,
     // 後方互換（旧コードが payment フィールドを参照している場合の対応）
     payment: currentPayment,
+    fiscalYear: parseInt(date.slice(0, 4)),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -1592,11 +1577,7 @@ window.setEditType = (type) => {
   renderEditCategoryGrid();
 };
 
-window.setEditWallet = (walletType) => {
-  editWalletType = walletType;
-  document.getElementById('edit-btn-wallet-personal').className = 'wallet-btn' + (walletType === 'personal' ? ' active-personal' : '');
-  document.getElementById('edit-btn-wallet-business').className = 'wallet-btn' + (walletType === 'business' ? ' active-business' : '');
-};
+window.setEditWallet = () => {};
 
 window.setEditStatus = (status) => {
   editEntryStatus = status;
@@ -1652,6 +1633,7 @@ window.saveEdit = async () => {
     status, debit, credit,
     categoryId:   editSelectedCategory,
     categoryName: cat?.name || '',
+    fiscalYear:   parseInt(date.slice(0, 4)),
     updatedAt:    new Date().toISOString(),
   };
 
