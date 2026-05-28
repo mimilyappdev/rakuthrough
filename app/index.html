@@ -269,7 +269,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 .accordion-header.open .accordion-arrow { transform: rotate(180deg); }
 /* アコーディオンの中身 */
 .accordion-body { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; background: var(--bg); border-radius: 0 0 var(--radius) var(--radius); padding: 0 16px; }
-.accordion-body.open { max-height: 1400px; padding: 4px 16px 16px; }
+.accordion-body.open { max-height: 4000px; padding: 4px 16px 16px; }
 
 /* 科目管理リスト */
 .cat-manage { display: flex; flex-direction: column; gap: 6px; }
@@ -806,6 +806,63 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
             <div class="settings-row-label">CSVエクスポート</div>
             <div class="settings-row-arrow">↓</div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑦ 申告サマリー（確定申告用・年1回）-->
+    <div class="settings-section">
+      <button class="accordion-header" onclick="toggleAccordion(this); if(this.classList.contains('open')){ initTaxYearSelect(); loadTaxSummary(); }">
+        <div class="accordion-title-wrap"><span>📋</span><span class="accordion-title">申告サマリー（確定申告用）</span></div>
+        <span class="accordion-arrow">▼</span>
+      </button>
+      <div class="accordion-body">
+        <div style="padding:4px 0 0">
+
+          <!-- 年度選択 -->
+          <div style="margin-bottom:16px;display:flex;align-items:center;gap:10px">
+            <label class="form-label" style="margin:0;white-space:nowrap">対象年度</label>
+            <select class="form-input" id="tax-year" style="max-width:110px;margin:0" onchange="loadTaxSummary()"></select>
+          </div>
+
+          <!-- 元入金 -->
+          <div style="margin-bottom:14px;padding:14px;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border)">
+            <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:10px">元入金</div>
+            <label class="form-label">期首元入金（円）</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <input class="form-input" type="number" id="opening-capital" placeholder="初年度のみ入力" inputmode="numeric" style="max-width:180px;margin:0">
+              <button onclick="saveCapital()" style="padding:8px 14px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'Noto Sans JP',sans-serif;white-space:nowrap">保存</button>
+            </div>
+            <div style="font-size:11px;color:var(--ink3);margin-top:6px">2年目以降は前年利益から自動計算されます</div>
+          </div>
+
+          <!-- 家事按分 -->
+          <div style="margin-bottom:14px;padding:14px;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border)">
+            <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:4px">家事按分</div>
+            <div style="font-size:11px;color:var(--ink2);margin-bottom:10px;line-height:1.6">自宅兼事務所・通信費など、私的にも使う経費の<b>事業利用割合（%）</b>を入力。</div>
+            <div id="proration-list" style="display:grid;gap:8px"></div>
+            <button onclick="saveProration()" style="margin-top:12px;width:100%;padding:10px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'Noto Sans JP',sans-serif">按分設定を保存</button>
+          </div>
+
+          <!-- 減価償却費 -->
+          <div style="margin-bottom:14px;padding:14px;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border)">
+            <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:10px">減価償却費の計上</div>
+            <div id="deprec-summary" style="margin-bottom:10px"></div>
+            <button onclick="postDepreciation()" id="deprec-post-btn" style="width:100%;padding:10px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'Noto Sans JP',sans-serif">今年分を経費に計上する</button>
+          </div>
+
+          <!-- P/L -->
+          <div style="margin-bottom:14px;padding:14px;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border)">
+            <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:12px">損益計算書（P/L）</div>
+            <div id="pl-table"></div>
+          </div>
+
+          <!-- B/S -->
+          <div style="padding:14px;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border)">
+            <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:12px">貸借対照表（B/S）</div>
+            <div id="bs-table"></div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -1918,13 +1975,219 @@ function rotateCatchcopy() {
 setInterval(rotateCatchcopy, 3000);
 
 // ====== アコーディオン開閉 ======
-// ヘッダーをタップすると中身がスライドで開閉する
 window.toggleAccordion = (header) => {
-  const body = header.nextElementSibling; // ヘッダーの次の兄弟要素がbody
+  const body   = header.nextElementSibling;
   const isOpen = header.classList.contains('open');
   header.classList.toggle('open', !isOpen);
   body.classList.toggle('open', !isOpen);
 };
+
+// ====== 申告サマリー（Step4+5+6+7） ======
+let prorationSettings = {};
+let capitalData       = {};
+let inventoryDataMap  = {};
+
+function initTaxYearSelect() {
+  const sel = document.getElementById('tax-year');
+  if (!sel || sel.options.length) return;
+  const y = new Date().getFullYear();
+  sel.innerHTML = [y, y-1, y-2].map(n => `<option value="${n}">${n}年</option>`).join('');
+}
+
+async function loadTaxSummary() {
+  const year = parseInt(document.getElementById('tax-year')?.value);
+  if (!year) return;
+
+  // 元入金
+  try {
+    const snap = await getDoc(doc(db, 'users', currentUser.uid, 'capital', String(year)));
+    const d    = snap.exists() ? snap.data() : {};
+    capitalData[year] = d;
+    document.getElementById('opening-capital').value = d.openingCapital || '';
+  } catch(e) { console.error(e); }
+
+  // 家事按分
+  try {
+    const snap = await getDoc(doc(db, 'users', currentUser.uid, 'settings', 'proration'));
+    if (snap.exists()) prorationSettings = snap.data().rates || {};
+  } catch(e) { console.error(e); }
+  renderProrationInputs();
+
+  // 棚卸しデータ（既存のsettings/inventoryから）
+  try {
+    const snap = await getDoc(doc(db, 'users', currentUser.uid, 'settings', 'inventory'));
+    if (snap.exists()) {
+      const d = snap.data();
+      if (d.year === year) {
+        inventoryDataMap[year] = { openingStock: d.open || 0, purchases: d.purchase || 0, closingStock: d.close || 0 };
+      }
+    }
+  } catch(e) { console.error(e); }
+
+  renderDeprecSummary(year);
+  renderPL(year);
+  renderBS(year);
+}
+
+function renderProrationInputs() {
+  const list    = document.getElementById('proration-list');
+  const expCats = categories.filter(c => c.type === 'expense' && c.id !== 'deprec');
+  list.innerHTML = expCats.map(c => `
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="flex:1;font-size:13px">${c.emoji} ${c.name}</span>
+      <input type="number" min="0" max="100" value="${prorationSettings[c.id] ?? 100}"
+        style="width:60px;padding:6px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;text-align:right;font-family:var(--mono);background:var(--surface);color:var(--ink)"
+        onchange="prorationSettings['${c.id}']=Math.min(100,Math.max(0,parseInt(this.value)||0))">
+      <span style="font-size:12px;color:var(--ink2);width:16px">%</span>
+    </div>`).join('');
+}
+
+window.saveCapital = async () => {
+  const year           = parseInt(document.getElementById('tax-year').value);
+  const openingCapital = parseInt(document.getElementById('opening-capital').value) || 0;
+  try {
+    await setDoc(doc(db, 'users', currentUser.uid, 'capital', String(year)), {
+      year, openingCapital, updatedAt: new Date().toISOString()
+    });
+    capitalData[year] = { openingCapital };
+    renderBS(year);
+    showToast('元入金を保存しました');
+  } catch(e) { showToast('保存に失敗しました'); console.error(e); }
+};
+
+window.saveProration = async () => {
+  try {
+    await setDoc(doc(db, 'users', currentUser.uid, 'settings', 'proration'), {
+      rates: prorationSettings, updatedAt: new Date().toISOString()
+    });
+    const year = parseInt(document.getElementById('tax-year').value);
+    renderPL(year);
+    showToast('按分設定を保存しました');
+  } catch(e) { showToast('保存に失敗しました'); console.error(e); }
+};
+
+function renderDeprecSummary(year) {
+  const el  = document.getElementById('deprec-summary');
+  const btn = document.getElementById('deprec-post-btn');
+  if (!allAssets.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--ink3)">登録済みの固定資産がありません</div>';
+    btn.style.display = 'none';
+    return;
+  }
+  btn.style.display = 'block';
+  const total = allAssets.reduce((s, a) => s + (a.annualExpense || 0), 0);
+  el.innerHTML = allAssets.map(a => `
+    <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span style="color:var(--ink2)">${a.name}</span>
+      <span style="font-family:var(--mono);color:var(--red)">¥${(a.annualExpense||0).toLocaleString()}</span>
+    </div>`).join('') +
+    `<div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;font-weight:700">
+      <span>合計</span><span style="font-family:var(--mono);color:var(--red)">¥${total.toLocaleString()}</span>
+    </div>`;
+}
+
+window.postDepreciation = async () => {
+  const year  = parseInt(document.getElementById('tax-year').value);
+  const total = allAssets.reduce((s, a) => s + (a.annualExpense || 0), 0);
+  if (!total) { showToast('計上する減価償却費がありません'); return; }
+  const exists = allTransactions.find(t => t.categoryId === 'deprec' && t.fiscalYear === year);
+  if (exists)  { showToast(`${year}年分はすでに計上済みです`); return; }
+  const tx = {
+    date: `${year}-12-31`, amount: total, type: 'expense', status: 'settled',
+    categoryId: 'deprec', categoryName: '減価償却費',
+    desc: `${year}年分 減価償却費（自動計上）`,
+    walletType: 'personal', paymentMethod: 'cash',
+    fiscalYear: year,
+    debit:  { account: '減価償却費', amount: total },
+    credit: { account: '固定資産',   amount: total },
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+  };
+  try {
+    const ref = await addDoc(userCol('transactions'), tx);
+    allTransactions.unshift({ id: ref.id, ...tx });
+    renderPL(year);
+    showToast(`✅ 減価償却費 ¥${total.toLocaleString()} を計上しました`);
+  } catch(e) { showToast('計上に失敗しました'); console.error(e); }
+};
+
+function calcPL(year) {
+  const fyTx = allTransactions.filter(t =>
+    (t.fiscalYear || parseInt(t.date?.slice(0,4))) === year
+  );
+  const revenue = fyTx
+    .filter(t => t.type === 'income' && t.status !== 'pending')
+    .reduce((s, t) => s + t.amount, 0);
+
+  const expenseMap = {};
+  fyTx.filter(t => t.type === 'expense').forEach(t => {
+    const catId   = t.categoryId  || 'other';
+    const catName = t.categoryName || '雑費';
+    const rate    = prorationSettings[catId] ?? 100;
+    const amount  = Math.floor(t.amount * rate / 100);
+    if (!expenseMap[catId]) expenseMap[catId] = { name: catName, amount: 0 };
+    expenseMap[catId].amount += amount;
+  });
+
+  const totalExpense  = Object.values(expenseMap).reduce((s, e) => s + e.amount, 0);
+  const inv           = inventoryDataMap[year] || {};
+  const cogs          = Math.max(0, (inv.openingStock || 0) + (inv.purchases || 0) - (inv.closingStock || 0));
+  const blueDeduction = 650000;
+  const grossProfit   = revenue - cogs;
+  const profit        = grossProfit - totalExpense - blueDeduction;
+  return { revenue, cogs, grossProfit, expenseMap, totalExpense, blueDeduction, profit };
+}
+
+function plRow(label, amount, opts = {}) {
+  const color  = opts.red ? 'var(--red)' : opts.blue ? 'var(--accent)' : 'var(--ink)';
+  const indent = opts.indent ? 'padding-left:14px;' : '';
+  const bold   = opts.bold   ? 'font-weight:700;' : 'color:var(--ink2);';
+  const border = opts.border ? 'border-top:1.5px solid var(--border);margin-top:4px;padding-top:8px;' : '';
+  return `<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;${indent}${bold}${border}">
+    <span>${label}</span>
+    <span style="font-family:var(--mono);color:${color}">${amount < 0 ? '▲' : ''}¥${Math.abs(amount).toLocaleString()}</span>
+  </div>`;
+}
+
+function renderPL(year) {
+  const el = document.getElementById('pl-table');
+  if (!el) return;
+  const { revenue, cogs, grossProfit, expenseMap, totalExpense, blueDeduction, profit } = calcPL(year);
+  let html = plRow('売上高', revenue, { bold: true });
+  if (cogs > 0) html += plRow('売上原価', cogs, { indent: true, red: true });
+  html += plRow('売上総利益', grossProfit, { bold: true, border: true });
+  Object.values(expenseMap).forEach(e => {
+    html += plRow(e.name, e.amount, { indent: true, red: true });
+  });
+  if (Object.keys(expenseMap).length) html += plRow('経費合計', totalExpense, { bold: true, border: true });
+  html += plRow('青色申告特別控除', blueDeduction, { indent: true });
+  html += plRow('当期利益', profit, { bold: true, border: true, blue: profit >= 0, red: profit < 0 });
+  el.innerHTML = html;
+}
+
+function renderBS(year) {
+  const el = document.getElementById('bs-table');
+  if (!el) return;
+  const { profit } = calcPL(year);
+  const inv = inventoryDataMap[year] || {};
+  const ar  = allTransactions
+    .filter(t => t.type === 'income' && t.status === 'pending' &&
+      (t.fiscalYear || parseInt(t.date?.slice(0,4))) === year)
+    .reduce((s, t) => s + t.amount, 0);
+  const closingStock   = inv.closingStock || 0;
+  const openingCapital = capitalData[year]?.openingCapital || 0;
+  const totalAssets    = ar + closingStock;
+  const totalEquity    = openingCapital + profit;
+
+  let html = `<div style="font-size:11px;font-weight:700;color:var(--ink2);margin-bottom:6px;letter-spacing:0.05em">【資産】</div>`;
+  html += plRow('売掛金',   ar,           { indent: true });
+  html += plRow('棚卸資産', closingStock,  { indent: true });
+  html += plRow('資産合計', totalAssets,   { bold: true, border: true });
+  html += `<div style="font-size:11px;font-weight:700;color:var(--ink2);margin:12px 0 6px;letter-spacing:0.05em">【純資産】</div>`;
+  html += plRow('元入金',   openingCapital, { indent: true });
+  html += plRow('当期利益', profit,         { indent: true, blue: profit >= 0, red: profit < 0 });
+  html += plRow('純資産合計', totalEquity,  { bold: true, border: true });
+  el.innerHTML = html;
+}
 
 // ====== Toast通知 ======
 window.showToast = (msg) => {
