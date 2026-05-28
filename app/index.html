@@ -125,11 +125,17 @@ body {
 .summary-sub { background: rgba(255,255,255,0.12); border-radius: 10px; padding: 12px; }
 .summary-sub-label { font-size: 11px; opacity: 0.7; margin-bottom: 4px; }
 .summary-sub-amount { font-size: 18px; font-weight: 600; font-family: var(--mono); }
-/* 売掛残高カード（pending収入がある月のみ表示）*/
-.pending-card { background: var(--accent-light); border: 1px solid rgba(184,134,11,0.25); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 14px; display: none; justify-content: space-between; align-items: center; }
-.pending-card.show { display: flex; }
-.pending-card-label { font-size: 12px; color: var(--accent); font-weight: 600; }
-.pending-card-amount { font-size: 17px; font-weight: 700; font-family: var(--mono); color: var(--accent); }
+/* 入金待ちセクション */
+.pending-section { margin-bottom: 16px; }
+.settle-btn { padding: 6px 12px; border-radius: var(--radius-sm); border: none; background: var(--green); color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; font-family: 'Noto Sans JP', sans-serif; flex-shrink: 0; }
+.settle-btn:active { opacity: 0.8; }
+.settle-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: center; justify-content: center; }
+.settle-modal-overlay.show { display: flex; }
+.settle-modal { background: var(--surface); border-radius: var(--radius); padding: 24px; width: 300px; max-width: 90vw; }
+.settle-modal-title { font-size: 15px; font-weight: 700; margin-bottom: 16px; }
+.settle-modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+.settle-cancel-btn { flex: 1; padding: 10px; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface); font-size: 14px; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; }
+.settle-confirm-btn { flex: 1; padding: 10px; border-radius: var(--radius-sm); border: none; background: var(--green); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; }
 
 .section-title { font-size: 13px; font-weight: 500; color: var(--ink2); margin-bottom: 12px; letter-spacing: 0.02em; }
 .chart-wrap { background: var(--surface); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
@@ -466,12 +472,6 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
       </div>
     </div>
 
-    <!-- 売掛残高カード（pending収入がある月のみ表示）-->
-    <div class="pending-card" id="pending-card">
-      <div class="pending-card-label">⏳ 今月の売掛（未入金）</div>
-      <div class="pending-card-amount" id="pending-amount">¥0</div>
-    </div>
-
     <div class="chart-wrap">
       <div class="section-title">月別収支（6ヶ月）</div>
       <div class="chart-bars" id="chart-bars"></div>
@@ -481,9 +481,22 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
       </div>
     </div>
 
-    <div class="section-title">最近の取引</div>
-    <div class="tx-list" id="recent-list">
-      <div class="empty-state">まだ取引がありません</div>
+    <!-- 入金待ちセクション -->
+    <div class="pending-section" id="pending-section" style="display:none">
+      <div class="section-title">⏳ 入金待ち</div>
+      <div class="tx-list" id="pending-list"></div>
+    </div>
+  </div>
+
+  <!-- 入金処理モーダル -->
+  <div class="settle-modal-overlay" id="settle-overlay">
+    <div class="settle-modal">
+      <div class="settle-modal-title">入金日を入力</div>
+      <input type="date" id="settle-date" style="width:100%; padding:10px; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-size:15px; font-family:'Noto Sans JP',sans-serif; color:var(--ink); background:var(--surface);">
+      <div class="settle-modal-actions">
+        <button class="settle-cancel-btn" onclick="cancelSettle()">キャンセル</button>
+        <button class="settle-confirm-btn" onclick="confirmSettle()">入金済みにする</button>
+      </div>
     </div>
   </div>
 
@@ -914,11 +927,11 @@ const DEFAULT_CATEGORIES = [
   { id: 'utilities', name: '光熱費',       type: 'expense', emoji: '⚡', color: '#1a56db' },
   { id: 'supplies',  name: '消耗品費',     type: 'expense', emoji: '🖊', color: '#6b6a64' },
   { id: 'travel',    name: '旅費交通費',   type: 'expense', emoji: '🚃', color: '#1a56db' },
-  { id: 'books',     name: '書籍・研修費', type: 'expense', emoji: '📚', color: '#1a56db' },
+  { id: 'books',     name: '研修費',       type: 'expense', emoji: '📚', color: '#1a56db' },
   { id: 'ads',       name: '広告宣伝費',   type: 'expense', emoji: '📣', color: '#1a56db' },
   { id: 'meeting',   name: '会議費',       type: 'expense', emoji: '☕', color: '#6b6a64' },
   { id: 'deprec',    name: '減価償却費',   type: 'expense', emoji: '💻', color: '#6b6a64' },
-  { id: 'other',     name: 'その他経費',   type: 'expense', emoji: '📋', color: '#6b6a64' },
+  { id: 'other',     name: '雑費',         type: 'expense', emoji: '📋', color: '#6b6a64' },
 ];
 
 // ====== アプリ状態 ======
@@ -1373,17 +1386,8 @@ function updateHome() {
   document.getElementById('summary-expense').textContent = fmt(expense);
   document.getElementById('summary-balance').textContent = fmt(settledIncome - expense);
 
-  // 売掛カード（pending収入がある場合のみ表示）
-  const pendingCard = document.getElementById('pending-card');
-  if (pendingIncome > 0) {
-    document.getElementById('pending-amount').textContent = fmt(pendingIncome);
-    pendingCard.classList.add('show');
-  } else {
-    pendingCard.classList.remove('show');
-  }
-
   renderChart();
-  renderRecent();
+  renderPending();
 }
 
 function renderChart() {
@@ -1411,15 +1415,63 @@ function renderChart() {
   `).join('');
 }
 
-function renderRecent() {
-  const list   = document.getElementById('recent-list');
-  const recent = allTransactions.slice(0, 5);
-  if (!recent.length) {
-    list.innerHTML = '<div class="empty-state">まだ取引がありません<br><small>「入力」タブから記録しましょう</small></div>';
-    return;
-  }
-  list.innerHTML = recent.map(tx => txCard(tx)).join('');
+let currentSettleId = null;
+
+function renderPending() {
+  const pending = allTransactions.filter(t => t.type === 'income' && t.status === 'pending');
+  const section = document.getElementById('pending-section');
+  const list    = document.getElementById('pending-list');
+  if (!pending.length) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+  list.innerHTML = pending.map(tx => {
+    const cat   = categories.find(c => c.id === tx.categoryId);
+    const emoji = cat?.emoji || '💰';
+    const desc  = tx.desc ? ` · ${tx.desc}` : '';
+    return `
+      <div class="tx-card is-pending">
+        <div class="tx-icon income">${emoji}</div>
+        <div class="tx-body">
+          <div class="tx-desc">${tx.categoryName || '収入'}</div>
+          <div class="tx-meta">請求日: ${tx.date}${desc}</div>
+        </div>
+        <div class="tx-amount income is-pending">${fmt(tx.amount)}</div>
+        <button class="settle-btn" onclick="settleTransaction('${tx.id}')">入金済み</button>
+      </div>`;
+  }).join('');
 }
+
+window.settleTransaction = (id) => {
+  currentSettleId = id;
+  document.getElementById('settle-date').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('settle-overlay').classList.add('show');
+};
+
+window.cancelSettle = () => {
+  currentSettleId = null;
+  document.getElementById('settle-overlay').classList.remove('show');
+};
+
+window.confirmSettle = async () => {
+  if (!currentSettleId) return;
+  const settledAt = document.getElementById('settle-date').value;
+  if (!settledAt) { showToast('入金日を入力してください'); return; }
+  try {
+    await updateDoc(doc(db, 'users', currentUser.uid, 'transactions', currentSettleId), {
+      status: 'settled',
+      settledAt,
+      updatedAt: new Date().toISOString(),
+    });
+    const tx = allTransactions.find(t => t.id === currentSettleId);
+    if (tx) { tx.status = 'settled'; tx.settledAt = settledAt; tx.updatedAt = new Date().toISOString(); }
+    cancelSettle();
+    updateHome();
+    renderHistory();
+    showToast('✅ 入金済みにしました');
+  } catch(e) {
+    showToast('更新に失敗しました');
+    console.error(e);
+  }
+};
 
 // ====== 取引カードのHTML生成（Ver.7.0）======
 // 科目カラードット・売掛バッジ・事業バッジを履歴のみに表示
