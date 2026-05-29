@@ -1524,13 +1524,15 @@ window.confirmSettle = async () => {
   const settledAt = document.getElementById('settle-date').value;
   if (!settledAt) { showToast('入金日を入力してください'); return; }
   try {
+    const settleDebit = { account: '事業主貸', amount: txSettle?.amount };
     await updateDoc(doc(db, 'users', currentUser.uid, 'transactions', currentSettleId), {
       status: 'settled',
       settledAt,
+      debit: settleDebit,
       updatedAt: new Date().toISOString(),
     });
     const tx = allTransactions.find(t => t.id === currentSettleId);
-    if (tx) { tx.status = 'settled'; tx.settledAt = settledAt; tx.updatedAt = new Date().toISOString(); }
+    if (tx) { tx.status = 'settled'; tx.settledAt = settledAt; tx.debit = settleDebit; tx.updatedAt = new Date().toISOString(); }
     cancelSettle();
     updateHome();
     renderHistory();
