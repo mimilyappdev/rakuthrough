@@ -1783,7 +1783,7 @@ window.showPage = (name) => {
   document.getElementById('tab-'  + name).classList.add('active');
   if (name === 'history')  filterHistory();
   if (name === 'entry')    initEntryForm();
-  if (name === 'settings') { renderCategoryManage(); loadInventory(); loadAssets(); initTaxYearSelect(); }
+  if (name === 'settings') { renderCategoryManage(); loadInventory(); loadAssets(); initTaxYearSelect(); loadTaxSummary(); }
 };
 
 // ====== 源泉徴収の計算 ======
