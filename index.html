@@ -987,6 +987,7 @@ const DEFAULT_CATEGORIES = [
 
   // ===== 経費 =====
   { id: 'outsource', name: '外注費',       type: 'expense', emoji: '👥', color: '#1a56db' },
+  { id: 'rent',      name: '家賃',         type: 'expense', emoji: '🏠', color: '#1a56db' },
   { id: 'comm',      name: '通信費',       type: 'expense', emoji: '📱', color: '#1a56db' },
   { id: 'utilities', name: '光熱費',       type: 'expense', emoji: '⚡', color: '#1a56db' },
   { id: 'supplies',  name: '消耗品費',     type: 'expense', emoji: '🖊', color: '#6b6a64' },
@@ -2064,7 +2065,7 @@ async function loadTaxSummary() {
 }
 
 // 家事按分の対象科目：自宅兼用が想定される科目のみ（外注費・旅費・広告費等は全額事業費のため除外）
-const PRORATION_DEFAULT_IDS = new Set(['comm', 'utilities']);
+const PRORATION_DEFAULT_IDS = new Set(['rent', 'comm', 'utilities']);
 
 function renderProrationInputs() {
   const list    = document.getElementById('proration-list');
