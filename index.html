@@ -812,8 +812,8 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 
     <!-- ⑦ 申告サマリー（確定申告用・年1回）-->
     <div class="settings-section">
-      <button class="accordion-header" onclick="toggleAccordion(this); if(this.classList.contains('open')){ initTaxYearSelect(); loadTaxSummary(); }">
-        <div class="accordion-title-wrap"><span>📋</span><span class="accordion-title">申告サマリー（確定申告用）</span></div>
+      <button class="accordion-header" onclick="openTaxSummary(this)">
+        <div class="accordion-title-wrap"><span>📋</span><span class="accordion-title">申告サマリー（確定申告用）</span><span id="tax-summary-lock" style="display:none;font-size:11px;color:var(--ink3);margin-left:6px">🔒 有料</span></div>
         <span class="accordion-arrow">▼</span>
       </button>
       <div class="accordion-body">
@@ -950,6 +950,29 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 
 <div class="toast" id="toast"></div>
 
+<!-- アップグレードモーダル -->
+<div id="upgrade-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:flex-end;justify-content:center" onclick="if(event.target===this)closeUpgradeModal()">
+  <div style="background:var(--bg);border-radius:20px 20px 0 0;padding:24px 20px 40px;width:100%;max-width:480px;animation:slideUp 0.25s ease">
+    <div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px"></div>
+    <div style="font-size:18px;font-weight:700;color:var(--ink);margin-bottom:6px;text-align:center">🔒 有料プランで使えます</div>
+    <div style="font-size:13px;color:var(--ink2);text-align:center;margin-bottom:20px;line-height:1.7" id="upgrade-modal-desc">この機能は有料プランでご利用いただけます。</div>
+    <div style="display:grid;gap:10px;margin-bottom:16px">
+      <div style="padding:14px;border:2px solid var(--accent);border-radius:var(--radius-sm);text-align:center">
+        <div style="font-size:13px;font-weight:700;color:var(--accent)">月額プラン</div>
+        <div style="font-size:22px;font-weight:700;color:var(--ink);margin:4px 0">¥550 <span style="font-size:13px;font-weight:400">/月</span></div>
+        <div style="font-size:11px;color:var(--ink2)">全機能・収支出力込み</div>
+      </div>
+      <div style="padding:14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);text-align:center">
+        <div style="font-size:13px;font-weight:700;color:var(--ink)">年額プラン <span style="font-size:11px;font-weight:400;color:var(--green)">お得</span></div>
+        <div style="font-size:22px;font-weight:700;color:var(--ink);margin:4px 0">¥3,980 <span style="font-size:13px;font-weight:400">/年</span></div>
+        <div style="font-size:11px;color:var(--ink2)">月換算 ¥331・全機能・収支出力込み</div>
+      </div>
+    </div>
+    <button style="width:100%;padding:14px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:15px;font-weight:700;cursor:pointer;font-family:'Noto Sans JP',sans-serif;margin-bottom:10px" onclick="showToast('決済機能は準備中です。もうしばらくお待ちください🙏');closeUpgradeModal()">プランを選ぶ（準備中）</button>
+    <button style="width:100%;padding:12px;background:transparent;color:var(--ink2);border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;cursor:pointer;font-family:'Noto Sans JP',sans-serif" onclick="closeUpgradeModal()">閉じる</button>
+  </div>
+</div>
+
 <!-- ============================================================
      Firebase SDK（モジュール形式）
      ============================================================ -->
@@ -1019,7 +1042,7 @@ try { await getRedirectResult(auth); } catch(e) { console.log('redirect:', e?.co
 const DEV_MODE = new URLSearchParams(location.search).get('dev') === '1';
 if (DEV_MODE) {
   currentUser = { uid: 'dev-user', email: 'dev@local', displayName: 'Dev' };
-  window.isPremium = true;
+  userPlan = 'pro';
   document.getElementById('loading').style.display = 'none';
   document.getElementById('auth-screen').style.display = 'none';
   document.getElementById('app').style.display = 'block';
@@ -1037,23 +1060,7 @@ onAuthStateChanged(auth, async (user) => {
   setTimeout(() => { loadingEl.style.display = 'none'; }, 250);
   if (user) {
     currentUser = user;
-    // ============================================================
-    // 管理者・プレミアム判定（Ver.8.0追加）
-    // 開発者メアドは常にプレミアム扱い。PAY.JP実装後はFirestoreで管理。
-    // ============================================================
-    const PREMIUM_EMAILS = ['miumiu7tanaka@gmail.com'];
-    window.isPremium = PREMIUM_EMAILS.includes(user.email);
-    // カラーピッカーの表示切り替え
-    if (window.isPremium) {
-      const badge = document.getElementById('premium-badge');
-      const lock  = document.getElementById('lock-badge');
-      const wrap  = document.getElementById('color-picker-wrap');
-      const lockW = document.getElementById('lock-wrap');
-      if (badge) badge.style.display = 'inline';
-      if (lock)  lock.style.display  = 'none';
-      if (wrap)  wrap.style.display  = 'block';
-      if (lockW) lockW.style.display = 'none';
-    }
+    await loadUserPlan();
     // アバター・メール設定（表示前に済ませる）
     const av = document.getElementById('user-avatar');
     if (user.photoURL) av.innerHTML = `<img src="${user.photoURL}" alt="">`;
@@ -1349,6 +1356,16 @@ window.selectCategory = (id) => {
 
 // ====== 取引の保存（Ver.7.0: 新フィールド追加）======
 window.submitEntry = async () => {
+  // 無料プランの月間入力制限チェック
+  if (!isPro()) {
+    const now   = new Date();
+    const ym    = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const count = allTransactions.filter(t => t.createdAt?.slice(0, 7) === ym).length;
+    if (count >= 15) {
+      showUpgradeModal('今月の入力件数（15件）に達しました。無制限に使うには有料プランへ。');
+      return;
+    }
+  }
   const amount = parseInt(document.getElementById('entry-amount').value);
   const desc   = document.getElementById('entry-desc').value.trim();
   const date   = document.getElementById('entry-date').value;
@@ -1862,6 +1879,7 @@ async function loadInventory() {
 
 // ====== CSVエクスポート（Ver.7.0: walletType / status 列を追加）======
 window.exportCSV = () => {
+  if (!isPro()) { showUpgradeModal('収支出力は有料プランでご利用いただけます。'); return; }
   if (!allTransactions.length) { showToast('取引データがありません'); return; }
   // CSV出力前に未入金（売掛）の取引があれば確認を促す
   const pendingList = allTransactions.filter(t => t.status === 'pending');
@@ -1906,7 +1924,7 @@ function getTextColor(hex) {
 
 // アクセントカラーを適用する
 window.applyAccentColor = async (hex) => {
-  if (!window.isPremium) return;
+  if (!isPro()) return;
   document.documentElement.style.setProperty('--accent', hex);
   const textColor = getTextColor(hex);
   // サマリーカード内テキストなど濃い背景上の文字色を調整
@@ -1932,7 +1950,7 @@ window.applyAccentColor = async (hex) => {
 
 // ログイン後にFirestoreから保存済みカラーを復元
 async function restoreAccentColor() {
-  if (!currentUser || !window.isPremium) return;
+  if (!currentUser || !isPro()) return;
   try {
     const { doc, getDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
     const snap = await getDoc(doc(db, 'users', currentUser.uid, 'settings', 'theme'));
@@ -1994,6 +2012,74 @@ function rotateCatchcopy() {
 setInterval(rotateCatchcopy, 3000);
 
 // ====== アコーディオン開閉 ======
+// ====== プラン管理（Stripe連携準備） ======
+let userPlan = 'free'; // 'free' | 'pro' | 'lifetime'
+const DEV_PRO_EMAILS = ['miumiu7tanaka@gmail.com'];
+
+function isPro() { return userPlan !== 'free'; }
+
+async function loadUserPlan() {
+  if (!currentUser) return;
+  // 開発者メールは常にpro
+  if (DEV_PRO_EMAILS.includes(currentUser.email)) {
+    userPlan = 'pro';
+    applyPlanUI();
+    return;
+  }
+  try {
+    const snap = await getDoc(doc(db, 'users', currentUser.uid));
+    if (snap.exists()) {
+      const data = snap.data();
+      // planExpiryがある場合は期限チェック
+      if (data.plan === 'pro' && data.planExpiry && new Date(data.planExpiry) < new Date()) {
+        userPlan = 'free';
+        await setDoc(doc(db, 'users', currentUser.uid), { plan: 'free', planExpiry: null }, { merge: true });
+      } else {
+        userPlan = data.plan || 'free';
+      }
+    } else {
+      // 初回ログイン：ユーザードキュメントを作成
+      await setDoc(doc(db, 'users', currentUser.uid), {
+        plan: 'free', stripeCustomerId: null, planExpiry: null,
+        createdAt: new Date().toISOString()
+      });
+      userPlan = 'free';
+    }
+  } catch(e) { console.error('loadUserPlan:', e); }
+  applyPlanUI();
+}
+
+function applyPlanUI() {
+  const pro = isPro();
+  // テーマ（カラーピッカー）
+  const badge = document.getElementById('premium-badge');
+  const lock  = document.getElementById('lock-badge');
+  const wrap  = document.getElementById('color-picker-wrap');
+  const lockW = document.getElementById('lock-wrap');
+  if (badge) badge.style.display = pro ? 'inline' : 'none';
+  if (lock)  lock.style.display  = pro ? 'none'   : 'inline';
+  if (wrap)  wrap.style.display  = pro ? 'block'  : 'none';
+  if (lockW) lockW.style.display = pro ? 'none'   : 'block';
+  // 申告サマリーの鍵アイコン
+  const taxLock = document.getElementById('tax-summary-lock');
+  if (taxLock) taxLock.style.display = pro ? 'none' : 'inline';
+}
+
+window.showUpgradeModal = (desc) => {
+  const el = document.getElementById('upgrade-modal');
+  if (desc) document.getElementById('upgrade-modal-desc').textContent = desc;
+  el.style.display = 'flex';
+};
+window.closeUpgradeModal = () => {
+  document.getElementById('upgrade-modal').style.display = 'none';
+};
+
+window.openTaxSummary = (header) => {
+  if (!isPro()) { showUpgradeModal('申告サマリー（P/L・B/S）は有料プランでご利用いただけます。'); return; }
+  toggleAccordion(header);
+  if (header.classList.contains('open')) { initTaxYearSelect(); loadTaxSummary(); }
+};
+
 window.toggleAccordion = (header) => {
   const body   = header.nextElementSibling;
   const isOpen = header.classList.contains('open');
