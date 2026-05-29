@@ -2063,9 +2063,16 @@ async function loadTaxSummary() {
   renderBS(year);
 }
 
+// 家事按分の対象科目：自宅兼用が想定される科目のみ（外注費・旅費・広告費等は全額事業費のため除外）
+const PRORATION_DEFAULT_IDS = new Set(['comm', 'utilities']);
+
 function renderProrationInputs() {
   const list    = document.getElementById('proration-list');
-  const expCats = categories.filter(c => c.type === 'expense' && c.id !== 'deprec');
+  const defaultIds = new Set(DEFAULT_CATEGORIES.map(c => c.id));
+  const expCats = categories.filter(c =>
+    c.type === 'expense' &&
+    (PRORATION_DEFAULT_IDS.has(c.id) || !defaultIds.has(c.id)) // デフォルト科目はcomm/utilitiesのみ、カスタム科目は全部
+  );
   list.innerHTML = expCats.map(c => `
     <div style="display:flex;align-items:center;gap:8px">
       <span style="flex:1;font-size:13px">${c.emoji} ${c.name}</span>
