@@ -1,0 +1,150 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function validEntry(e) {
+      return e is map
+        && e.account is string
+        && e.amount is number;
+    }
+
+    function hasBothOrNone() {
+      return (
+        (!("debit" in request.resource.data) && !("credit" in request.resource.data)) ||
+        (("debit" in request.resource.data) && ("credit" in request.resource.data))
+      );
+    }
+
+    function transactionAllowedFields() {
+      return request.resource.data.keys().hasOnly([
+        "id", "date", "amount", "type", "status",
+        "desc", "summary", "memo",
+        "categoryId", "categoryName", "category",
+        "walletType", "paymentMethod", "payment",
+        "debit", "credit",
+        "isWithholding", "withholdingTax", "receivedAmount",
+        "fiscalYear", "settledAt",
+        "createdAt", "updatedAt",
+        "source", "sourceKey"
+      ]);
+    }
+
+    function transactionRequiredFields() {
+      return request.resource.data.keys().hasAll([
+        "date", "amount", "type",
+        "walletType", "paymentMethod",
+        "status", "createdAt", "updatedAt"
+      ]);
+    }
+
+    function validTransactionData() {
+      return request.resource.data.date is string
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && request.resource.data.type in ["income", "expense"]
+        && request.resource.data.walletType in ["personal", "business"]
+        && request.resource.data.paymentMethod in ["cash", "card"]
+        && request.resource.data.status in [
+            "pending", "settled", "canceled", "refunded"
+           ]
+        && (!("desc"    in request.resource.data) || request.resource.data.desc is string)
+        && (!("summary" in request.resource.data) || request.resource.data.summary is string)
+        && (!("memo"    in request.resource.data) || request.resource.data.memo is string)
+        && hasBothOrNone()
+        && (!("debit"  in request.resource.data) || validEntry(request.resource.data.debit))
+        && (!("credit" in request.resource.data) || validEntry(request.resource.data.credit))
+        && (!("isWithholding"  in request.resource.data) || request.resource.data.isWithholding is bool)
+        && (!("withholdingTax" in request.resource.data) || request.resource.data.withholdingTax is number)
+        && (!("receivedAmount" in request.resource.data) || request.resource.data.receivedAmount is number)
+        && (!("fiscalYear"     in request.resource.data) || request.resource.data.fiscalYear is int)
+        && (!("settledAt"      in request.resource.data) || request.resource.data.settledAt is string);
+    }
+
+    function preserveCreatedAt() {
+      return request.resource.data.createdAt == resource.data.createdAt;
+    }
+
+    function validUpdateFields() {
+      return request.resource.data.diff(resource.data)
+        .changedKeys()
+        .hasOnly([
+          "date", "desc", "summary", "memo",
+          "amount", "type",
+          "categoryId", "categoryName", "category",
+          "walletType", "paymentMethod", "payment",
+          "status", "debit", "credit",
+          "isWithholding", "withholdingTax", "receivedAmount",
+          "fiscalYear", "settledAt",
+          "updatedAt"
+        ]);
+    }
+
+    match /users/{userId}/transactions/{txId} {
+      allow read:   if isOwner(userId);
+      allow create: if isOwner(userId)
+        && transactionAllowedFields()
+        && transactionRequiredFields()
+        && validTransactionData();
+      allow update: if isOwner(userId)
+        && transactionAllowedFields()
+        && validTransactionData()
+        && preserveCreatedAt()
+        && validUpdateFields();
+      allow delete: if isOwner(userId);
+    }
+
+    match /users/{userId}/categories/{id} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /users/{userId}/assets/{id} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /users/{userId}/settings/{id} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /users/{userId}/capital/{id} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /users/{userId}/proration/{id} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /users/{userId}/inventory/{id} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // ── Rakutto管理コレクション ──
+    match /users/{userId}/products/{id} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /users/{userId}/inventoryLogs/{id} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /users/{userId}/sales/{id} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /users/{userId}/consignees/{id} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /system_configs/{configId} {
+      allow read:  if true;
+      allow write: if false;
+    }
+  }
+}
