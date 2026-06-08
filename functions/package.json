@@ -1,0 +1,16 @@
+{
+  "name": "rakuthrough-functions",
+  "description": "Cloud Functions for RakuThrough",
+  "scripts": {
+    "deploy": "firebase deploy --only functions"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^6.0.0",
+    "stripe": "^16.0.0"
+  }
+}

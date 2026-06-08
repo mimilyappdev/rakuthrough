@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RakuThrough / Rakutto 開発ログ</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Hiragino Kaku Gothic ProN', 'Meiryo', sans-serif;
+    background: #f7f5f2;
+    color: #333;
+    padding: 40px 20px;
+    line-height: 1.8;
+  }
+  .container { max-width: 800px; margin: 0 auto; }
+  h1 {
+    font-size: 1.6rem;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #222;
+  }
+  .subtitle {
+    color: #888;
+    font-size: 0.9rem;
+    margin-bottom: 48px;
+  }
+  .entry {
+    background: #fff;
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 28px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  .date {
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: #fff;
+    background: #7c6fcc;
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 20px;
+    margin-bottom: 12px;
+    letter-spacing: 0.05em;
+  }
+  .entry-title {
+    font-size: 1.15rem;
+    font-weight: bold;
+    color: #222;
+    margin-bottom: 14px;
+  }
+  .topic {
+    margin-bottom: 20px;
+  }
+  .topic-label {
+    font-size: 0.78rem;
+    font-weight: bold;
+    color: #7c6fcc;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+  .topic-body {
+    font-size: 0.95rem;
+    color: #444;
+  }
+  ul {
+    padding-left: 1.4em;
+  }
+  li { margin-bottom: 4px; }
+  .decided {
+    background: #f0eeff;
+    border-left: 3px solid #7c6fcc;
+    padding: 10px 14px;
+    border-radius: 0 8px 8px 0;
+    font-size: 0.93rem;
+    margin-top: 8px;
+  }
+  .tag {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 2px 10px;
+    border-radius: 12px;
+    margin-right: 6px;
+    margin-bottom: 6px;
+    font-weight: bold;
+  }
+  .tag-blue { background: #e8f0fe; color: #3b5bdb; }
+  .tag-green { background: #e6f9f0; color: #2f7a5a; }
+  .tag-orange { background: #fff3e0; color: #c0660a; }
+  .divider {
+    border: none;
+    border-top: 1px dashed #e0ddd8;
+    margin: 20px 0;
+  }
+  .note-hint {
+    font-size: 0.82rem;
+    color: #aaa;
+    margin-top: 10px;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>📓 RakuThrough / Rakutto 開発ログ</h1>
+  <p class="subtitle">Noteに書くときの下書き用・思考の記録</p>
+
+  <!-- 2026-06-08 -->
+  <div class="entry">
+    <div class="date">2026年6月8日</div>
+    <div class="entry-title">Stripe連携 Cloud Functions 実装・APIキードメイン制限設定</div>
+
+    <div class="topic">
+      <div class="topic-label">やったこと</div>
+      <div class="topic-body">
+        <ul>
+          <li><strong>Firebase Blazeプラン移行</strong>完了。予算アラート設定。</li>
+          <li><strong>Cloud Functions実装・デプロイ</strong>（<code>functions/index.js</code>）
+            <ul>
+              <li><code>createCheckoutSession</code>：Stripe Checkout Session作成（httpsCallable）</li>
+              <li><code>stripeWebhook</code>：署名検証 → plan更新（checkout完了・サブスク支払・解約）</li>
+            </ul>
+          </li>
+          <li><strong>Stripe Webhook登録</strong>（<code>us-central1-blue-tax-app.cloudfunctions.net/stripeWebhook</code>）<br>
+            イベント: checkout.session.completed / invoice.payment_succeeded / customer.subscription.deleted</li>
+          <li><strong>プラン構造を4種に変更</strong>：free / export（¥1,500/年） / pro（¥550月・¥3,980年） / lifetime（¥5,500）<br>
+            <code>isPro()</code> → pro・lifetime のみ。<code>canExport()</code> → export含む。</li>
+          <li><strong>アップグレードモーダル刷新</strong>：「準備中」廃止 → 実際のStripe Checkoutボタンに。</li>
+          <li><strong>無料枠を月10件に変更</strong>（15件から）</li>
+          <li><strong>Firestoreルール修正</strong>：<code>users/{userId}</code>ドキュメント自体のread/writeが未定義だったのを追加。</li>
+          <li><strong>APIキードメイン制限設定</strong>：<code>blue-tax-app.firebaseapp.com/*</code>等を追加。</li>
+        </ul>
+        <div class="decided">
+          Stripe Checkoutページへの遷移を確認済み（✅）。Webhook動作確認は初回購入時に行う。
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">検討してやめたこと・トラブル</div>
+      <div class="topic-body">
+        <ul>
+          <li><strong>GitHubリポジトリをPrivateに変更</strong>→ GitHub Pages無料プランはPublic必須のため断念。APIキーはドメイン制限+Firestoreルールで対策。</li>
+          <li><strong>Netlify移行</strong>→ APIキーはDevToolsで引き続き見える。根本解決にならないためやらない。</li>
+          <li><strong>Firebase Extension（Stripe）</strong>→ exportプランのカスタム構造と合わないため却下。</li>
+          <li><strong>Stripeシークレットキー Invalid API Key 問題</strong>→ 原因はNotePadのキーが過去にロールされて無効化されていた。キーをロールして再発行で解決。</li>
+          <li><strong>APIキード制限でアプリが見えなくなった問題</strong>→ <code>blue-tax-app.firebaseapp.com/*</code>（Firebase Auth認証ハンドラ）を追加で解決。</li>
+        </ul>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">残タスク・要相談</div>
+      <div class="topic-body">
+        <ul>
+          <li>【高】Webhook動作確認（初回購入時にFirestore <code>users/{uid}.plan</code>が更新されるか）</li>
+          <li>【高】確認後 → <code>dev/</code> → <code>app/</code> コピー → push（本番リリース）</li>
+          <li>【中】プライバシーポリシーページ作成</li>
+          <li>【中】各アプリLPフッターに特商法リンク追加</li>
+          <li>Rakuttoバッジ動作確認（連携データが来たら）</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="note-hint">💡 次：初回購入でWebhook確認 → 本番リリース</p>
+  </div>
+
+  <!-- 2026-06-07 -->
+  <div class="entry">
+    <div class="date">2026年6月7日</div>
+    <div class="entry-title">Rakuttoバッジ実装・Firestoreルール更新デプロイ</div>
+
+    <div class="topic">
+      <div class="topic-label">やったこと</div>
+      <div class="topic-body">
+        <ul>
+          <li>申告サマリーの年度セレクト直下に「📦 Rakuttoから○月○日連携済み」バッジを実装。<br>
+            判定：<code>lastSyncedFrom === 'rakutto'</code> かつ <code>d.year === year</code>。年度切り替え時にリセット。</li>
+          <li>Firestoreルールに <code>source</code> / <code>sourceKey</code> フィールドを追加。Rakutto管理コレクション4つ（products / inventoryLogs / sales / consignees）も追加。</li>
+          <li>Firebase にデプロイ・GitHub にpush済み。</li>
+          <li>ローカルの <code>firestore-rules.txt</code> がデプロイ済みより古かったことが発覚 → 同期した。</li>
+        </ul>
+        <div class="decided">
+          ルール変更はcommit+pushだけでは反映されない。<code>firebase deploy --only firestore:rules</code> が必要。
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">検討してやめたこと</div>
+      <div class="topic-body">
+        <ul>
+          <li><strong>変更2・3（settledAt追加）</strong>→ デプロイ済みルールに既に含まれていたため不要だった。ローカルファイルが古くて差分に見えていただけ。</li>
+          <li><strong>変更4（capital/proration/inventory追加）</strong>→ 同上。既にデプロイ済みだった。</li>
+          <li><strong>pythonでローカルサーバー</strong>→ Microsoft Store版ダミーのため起動不可。<code>npx serve</code> を使う。</li>
+        </ul>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">残タスク・要相談</div>
+      <div class="topic-body">
+        <ul>
+          <li>バッジ動作確認（Rakuttoから連携データが来たら確認）</li>
+          <li>テーマカラーの修正検討（次回）</li>
+          <li>Stripe連携（Firebase Blaze移行 → Cloud Functions → Checkout URL差し替え）</li>
+          <li>無料制限の範囲検討（月15件・CSV・申告サマリー・テーマ）</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="note-hint">💡 次：テーマカラー修正の検討 → Stripe連携</p>
+  </div>
+
+  <!-- 2026-06-05 -->
+  <div class="entry">
+    <div class="date">2026年6月5日</div>
+    <div class="entry-title">Rakutto × RakuThrough 連携仕様を全部確定させた</div>
+
+    <div class="topic">
+      <div class="topic-label">やったこと</div>
+      <div class="topic-body">
+        <ul>
+          <li>RakuttoからFirestore連携の仕様書（ドラフト）が届いたので、RakuThroughのコードと突き合わせた。</li>
+          <li>イベント直売フォーマットに <code>date</code>・<code>categoryId</code>・<code>categoryName</code> 等が抜けていたのを発見 → Rakutto側に追記依頼。</li>
+          <li>両者確認済みの確定仕様書を <code>rakutto_renkei_spec_20260605.txt</code> に出力。</li>
+          <li><code>dev/index.backup.20260605.html</code> を作成。</li>
+        </ul>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">確定した内容</div>
+      <div class="topic-body">
+        <span class="tag tag-blue">Firestore設計</span>
+        <span class="tag tag-green">連携仕様</span>
+        <ul>
+          <li><strong>amount = netSales（手数料引き後）</strong>で統一。grossSalesは渡さない。</li>
+          <li><strong>入金処理</strong>はRakuttoでは行わない。RakuThroughの「入金済み」ボタンを使う。</li>
+          <li><strong>棚卸し open の引き継ぎ</strong>はRakutto側の責任。RakuThroughに自動繰越なし。</li>
+          <li><strong>締め済み保護</strong>：Rakutto側が <code>capital/{year}.isClosed</code> を読んで警告する（案A）。</li>
+          <li><strong>source / sourceKey フィールド</strong>はRakuThrough UIに一切干渉しないことをコードで確認。</li>
+        </ul>
+        <div class="decided">
+          → 両者でサインオフ済み。実装可能状態。
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">検討してやめたこと</div>
+      <div class="topic-body">
+        <ul>
+          <li><strong>確認ボタン（弥生スタイル）</strong>→ 不要。連携は手動ボタンなのでユーザーの意図が確定済み。</li>
+          <li><strong>締め済み保護をRakuThrough側で実装（案B）</strong>→ Rakutto側に委任（案A）が最小構成。</li>
+        </ul>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">残タスク・確認待ち</div>
+      <div class="topic-body">
+        <ul>
+          <li>申告サマリーへの「Rakuttoから○月○日連携済み」バッジ表示 → Rakuttoに確認中。OKなら実装する。</li>
+          <li>委託先の上限数：未決定</li>
+          <li>Booth手数料の自動計算範囲：未決定（MVPは手動入力）</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="note-hint">💡 次：バッジ表示の確認待ち → Stripe連携（Firebase Blaze移行 → Cloud Functions）</p>
+  </div>
+
+  <!-- 2026-06-03〜04 -->
+  <div class="entry">
+    <div class="date">2026年6月3〜4日</div>
+    <div class="entry-title">Stripe登録・特商法ページ作成・インボイス方針決定</div>
+
+    <div class="topic">
+      <div class="topic-label">やったこと</div>
+      <div class="topic-body">
+        <ul>
+          <li>Stripeアカウント作成。最初VGenのアカウントに入ってしまった（GoogleログインがVGen Stripe Connectと紐づいていたため）→ 新規アカウントを追加して解決。</li>
+          <li>RakuThrough プレミアムの商品設定：月額¥550・年額¥3,980・買い切り¥5,500。</li>
+          <li>特定商取引法ページを作成。全アプリ（RakuThrough・RakuNovel・〆スケ・Rakutto）を1ページにまとめた。</li>
+          <li><code>https://mimilyappdev.github.io/legal/tokushoho.html</code> にpush済み。</li>
+        </ul>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">検討した内容</div>
+      <div class="topic-body">
+        <ul>
+          <li><strong>特商法ページ：アプリ別 vs 1ページ統合</strong> → 1ページに統合。アプリが増えてもセクション追加するだけ。</li>
+          <li><strong>住所・氏名の開示</strong> → 2022年改正で「請求があれば開示」形式がOKに。バーチャルオフィスなしで対応可能。</li>
+          <li><strong>インボイス対応</strong> → しない。免税事業者のため不要。課税売上1,000万円を超えたら検討する。</li>
+        </ul>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">残タスク</div>
+      <div class="topic-body">
+        <ul>
+          <li>各アプリLPのフッターに特商法リンク追加（RakuThrough・RakuNovel・〆スケ・Rakutto）</li>
+          <li>未掲載アプリの料金確定 → tokushoho.html に追加してpush</li>
+          <li>Firebase Blazeプランへの移行</li>
+          <li>Cloud Functions実装（Stripe Webhook → Firestore plan更新）</li>
+          <li>アップグレードモーダルのボタンをStripe Checkout URLに差し替え</li>
+          <li><code>app/index.html</code> に最新アプリをpush（メンテ中ページを本物に差し替え）</li>
+          <li>プライバシーポリシーページ作成（<code>/legal/privacy.html</code>）</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="note-hint">💡 次：Firebase Blaze移行 → Cloud Functions → Stripe Checkout URL差し替え</p>
+  </div>
+
+  <!-- 2026-06-02 -->
+  <div class="entry">
+    <div class="date">2026年6月2日</div>
+    <div class="entry-title">フォルダ構成を整理して、LPをちゃんと置いた</div>
+
+    <div class="topic">
+      <div class="topic-label">やったこと</div>
+      <div class="topic-body">
+        <ul>
+          <li>rootの <code>index.html</code> がアプリ本体になっていたのを発見。LP→root、アプリ→app/ に整理した。</li>
+          <li><code>dev/index.html</code>（最新アプリ）を <code>app/index.html</code> にコピーして本番配置。</li>
+          <li>Downloads に残っていた <code>lp.html</code>（6/2版）をベースにLPを更新。</li>
+        </ul>
+        <div class="decided">
+          フォルダルール：修正は dev/ のみ → 確認OK後に app/ にコピー。root の index.html はLP専用。
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">LP修正内容</div>
+      <div class="topic-body">
+        <ul>
+          <li>「青色申告対応」の断言 → 「確定申告サポート・準備」に緩和（断言できないので）</li>
+          <li>全CTAリンクを <code>./app/</code> に変更</li>
+          <li>フッター：利用規約・プライバシーポリシー・お問い合わせ・Mimilyアプリ一覧を追加（RakuNovelに合わせた）</li>
+        </ul>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">本番反映</div>
+      <div class="topic-body">
+        <ul>
+          <li><code>rakuthrough-git/index.html</code> にLPを上書きして push → 本番サイト切り替え完了</li>
+          <li><code>rakuthrough-git/app/index.html</code> はメンテナンス中ページのまま（アプリ本体のpushは次回）</li>
+          <li>プライバシーポリシーページ（<code>/legal/privacy.html</code>）は未作成・要対応</li>
+        </ul>
+        <div class="decided">
+          → https://mimilyappdev.github.io/rakuthrough/ がLPに切り替わった
+        </div>
+      </div>
+    </div>
+
+    <p class="note-hint">💡 次：Stripe連携（アカウント作成 → Firebase Blaze移行 → Checkout URL差し替え）</p>
+  </div>
+
+  <!-- 2026-05-30 -->
+  <div class="entry">
+    <div class="date">2026年5月30日</div>
+    <div class="entry-title">Rakutto × RakuThrough の連携設計を考えた</div>
+
+    <div class="topic">
+      <div class="topic-label">相談した内容</div>
+      <div class="topic-body">
+        とらのあな等の委託販売って月末にまとめて「◯個売れました」って来るじゃないですか。
+        あれって税務上どう扱えばいいのか、月次集計でいいのか、
+        振込タイミングがチャンネルごとに全部違うけどどうするのか——を相談した。
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">わかったこと（税務）</div>
+      <div class="topic-body">
+        <ul>
+          <li>委託売上は「月次集計でOK」。日々の個数データは不要。</li>
+          <li>売上の計上タイミングは「振込が来たとき」じゃなくて「月次明細が来たとき」が正しい。</li>
+          <li>明細月と入金月がズレるときは<strong>売掛金</strong>を使って管理する。</li>
+          <li>イベント現金売上はその場で売上計上（売掛金なし）。</li>
+        </ul>
+        <div class="decided">
+          → 振込消込（売掛金→現金）は自動化できない。チャンネルごとに振込日が違いすぎるから。
+          RakuThrough側で「入金きた」を手動でタップする設計にする。
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">Rakuttoの設計で決まったこと</div>
+      <div class="topic-body">
+        <span class="tag tag-blue">チャンネル設定</span>
+        <span class="tag tag-green">入金タイプ</span>
+        <span class="tag tag-orange">月次連携</span>
+        <ul>
+          <li>Rakuttoはまだ未実装。最初から「RakuThroughに渡しやすい設計」にする。</li>
+          <li>各チャンネルに「入金タイプ」を設定する。
+            <ul>
+              <li><strong>immediate（即時）</strong>：イベント現金など → RakuThroughに「現金/売上」で送る</li>
+              <li><strong>deferred（後払い）</strong>：委託など → RakuThroughに「売掛金/売上」（入金待ち）で送る</li>
+            </ul>
+          </li>
+          <li>月次で「売上合計・仕入合計・在庫数」の3つを送るだけでOK。</li>
+          <li>ユーザーは委託の月次明細が来たらRakuttoに入力 → 送信ボタン1つ。</li>
+        </ul>
+        <div class="decided">
+          → チャンネル設定画面がRakuttoの核心機能になる。
+        </div>
+      </div>
+    </div>
+
+    <p class="note-hint">💡 Note用メモ：「販売チャンネルごとに入金タイミングが違う問題、どう設計したか」</p>
+  </div>
+
+  <!-- 2026-05-29 -->
+  <div class="entry">
+    <div class="date">2026年5月29日</div>
+    <div class="entry-title">青色申告65万円控除対応を全部実装した</div>
+
+    <div class="topic">
+      <div class="topic-label">相談した内容</div>
+      <div class="topic-body">
+        青色申告65万円控除を取るために必要な帳簿機能——
+        家事按分・減価償却・元入金・年次締め・P/L・B/Sをどう作るか、
+        設計方針を相談しながら1つずつ実装した。
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">実装したもの（Step 1〜8）</div>
+      <div class="topic-body">
+        <ul>
+          <li><strong>Step1</strong>：fiscalYear フィールド追加・年度別集計ロジック</li>
+          <li><strong>Step2</strong>：元入金UI（期首入力・年次自動繰越）</li>
+          <li><strong>Step3</strong>：入金待ち→入金済みで借方を売掛金→事業主貸に更新</li>
+          <li><strong>Step4</strong>：家事按分設定（家賃・通信費・光熱費を年末一括入力）</li>
+          <li><strong>Step5</strong>：減価償却費の自動起票（12/31付け一括）</li>
+          <li><strong>Step6</strong>：P/L・B/S 集計ロジック</li>
+          <li><strong>Step7</strong>：申告サマリーUI（設定ページ最下部のアコーディオン）</li>
+          <li><strong>Step8</strong>：年次締め（isClosedフラグ＋ソフトロック）</li>
+        </ul>
+        <div class="decided">
+          → 全8ステップ完了。青色65万控除に必要な帳簿機能が一通りそろった。
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">設計で迷ったところ</div>
+      <div class="topic-body">
+        <ul>
+          <li>家事按分：毎取引に按分を入れるのは大変すぎるので「年末一括入力」にした</li>
+          <li>年次締め：完全ロックだと困るので「警告ダイアログのみ、編集は可」のソフトロックにした</li>
+          <li>減価償却：月割り計上より年1回の方が入力が圧倒的にラクなので12/31一括にした</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="note-hint">💡 Note用メモ：「個人事業主向けに青色申告機能を実装した話」「どこを省略してどこを丁寧にしたか」</p>
+  </div>
+
+  <!-- 2026-05-31 Rakutto設計完了 -->
+  <div class="entry">
+    <div class="date">2026年5月30〜31日</div>
+    <div class="entry-title">Rakuttoの設計をほぼ全部固めた</div>
+
+    <div class="topic">
+      <div class="topic-label">やったこと</div>
+      <div class="topic-body">
+        Rakuttoをゼロから設計。Geminiと揉んだ案が出てきて、アーキテクチャが一気に固まった。
+        同時にRakuThroughとの連携設計、税務処理の考え方、セキュリティ方針まで決めた。
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">確定した設計（主なもの）</div>
+      <div class="topic-body">
+        <span class="tag tag-blue">PWA</span>
+        <span class="tag tag-green">QRレジ</span>
+        <span class="tag tag-orange">Firebase共有</span>
+        <ul>
+          <li>レジは「子デバイス」がオフラインで売上カウント → 親がQRスキャンで集計</li>
+          <li>子デバイス最大5台まで（大手〜中手対応）</li>
+          <li>イベント後に実棚で手動上書き → Uploadで同期</li>
+          <li>RakuThroughと同じFirebaseプロジェクト（blue-tax-app）を使う</li>
+          <li>商品画像はBase64でFirestore保存（Firebase Storage不使用）</li>
+          <li>読み込み1分問題 → .env.localがなかっただけ。設定して解消</li>
+        </ul>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">料金プラン</div>
+      <div class="topic-body">
+        <ul>
+          <li>無料：レジのみ・localStorage・スクショ保存</li>
+          <li>¥980/回：QR5台・画像・イベントデータDL</li>
+          <li>¥550/月：在庫管理・RakuThrough連携・クラウド永続</li>
+        </ul>
+        <div class="decided">→ ¥550の主価値は「在庫管理したい人」。Airレジとの差別化はオフライン対応・ブラウザのみ・帳簿連携。</div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">委託販売の税務処理も整理した</div>
+      <div class="topic-body">
+        <ul>
+          <li>とらのあな等の委託売上は「月次明細が来たとき」に計上（入金時ではない）</li>
+          <li>振込と明細がズレる → 売掛金で管理、入金消込は手動</li>
+          <li>売れ残り在庫は廃棄しない限り棚卸し資産のまま（経費にならない）</li>
+          <li>鉄道模型・絵画・ハンドメイド、それぞれ棚卸し処理が違う → 税務相談で確認予定</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="note-hint">💡 Note用メモ：「在庫管理アプリを作りながら自分の税務処理も学んだ話」「設計1日で全部決まった話」</p>
+  </div>
+
+  <!-- 2026-05-30 税務相談準備 -->
+  <div class="entry">
+    <div class="date">2026年5月30日</div>
+    <div class="entry-title">税務署の無料相談会に持っていく資料を作った</div>
+
+    <div class="topic">
+      <div class="topic-label">きっかけ</div>
+      <div class="topic-body">
+        青色申告65万円控除に向けてRakuThroughの帳簿機能は一通り実装できた。
+        でも「これで本当に合ってるの？」が不安で、無料相談会に持っていこうと思った。
+        ログインなしで動作確認もできないし、仮データで資料を作ることにした。
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">やったこと</div>
+      <div class="topic-body">
+        <ul>
+          <li>RakuThroughの申告サマリーに「印刷する（相談会用）」ボタンを追加</li>
+          <li>印刷時にP/L・B/S・家事按分だけきれいに出力される <code>@media print</code> を実装</li>
+          <li>サンプルデータ入りの相談会用HTMLをデスクトップに作成</li>
+          <li>相談会で聞くことリストを7カテゴリ・25問、回答メモ欄つきで作成</li>
+        </ul>
+        <div class="decided">
+          → ブラウザの「印刷→PDF保存」でそのまま持参できる形になった。
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">相談会で確認したいこと（主なもの）</div>
+      <div class="topic-body">
+        <ul>
+          <li>委託販売（とらのあな等）の売上計上タイミングと売掛金処理</li>
+          <li>鉄道模型・絵画・ハンドメイドの棚卸し管理——それぞれ科目が違う</li>
+          <li>自作品が売れ残ったとき、棚卸し資産の計上はどこまで厳密にすべきか</li>
+          <li>アプリ開発費（ドメイン・サーバー等）は経費にできるか</li>
+          <li>青色申告65万円控除はe-Tax申告で取れるか</li>
+        </ul>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">税務上わかったこと（相談前の自習メモ）</div>
+      <div class="topic-body">
+        <ul>
+          <li>委託販売の売上は「入金時」ではなく「月次明細が来たとき」に計上するのが正しい</li>
+          <li>振込タイミングはチャンネルごとにバラバラ → 売掛金で管理する設計が必要</li>
+          <li>売れ残り在庫は廃棄しない限り経費にできない。棚卸し資産に計上し続ける</li>
+          <li>RakuThrough自体は電子帳簿保存法の要件を満たさないが、65万控除はe-Taxで取れる</li>
+          <li>絵画・ハンドメイドは「自分の労働分は原価に入らない」ため、原価=材料費のみ</li>
+        </ul>
+        <div class="decided">
+          → これをベースに相談会で「合ってるか？」を確認しにいく。
+        </div>
+      </div>
+    </div>
+
+    <p class="note-hint">💡 Note用メモ：「税理士に相談する前に自分でここまで整理した話」「クリエイターの青色申告、何が難しいか」</p>
+  </div>
+
+  <!-- 追記用テンプレート -->
+  <div class="entry" style="border: 2px dashed #e0ddd8; background: #fafaf8; box-shadow: none;">
+    <div class="date" style="background: #ccc;">●月〇日</div>
+    <div class="entry-title" style="color: #aaa;">ここに次の記録を追加してください</div>
+    <div class="topic-body" style="color: #bbb; font-size: 0.9rem;">
+      ↑ このブロックをコピーして上に追加していく
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

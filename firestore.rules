@@ -87,6 +87,10 @@ service cloud.firestore {
         ]);
     }
 
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
     match /users/{userId}/transactions/{txId} {
       allow read:   if isOwner(userId);
       allow create: if isOwner(userId)
