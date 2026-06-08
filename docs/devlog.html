@@ -132,6 +132,79 @@
     </div>
   </div>
 
+  <!-- 2026-06-09 -->
+  <div class="entry">
+    <div class="date">2026年6月9日</div>
+    <div class="entry-title">本番公開・LP法的リンク整備・税理士相談資料作成</div>
+
+    <div class="topic">
+      <div class="topic-label">やったこと</div>
+      <div class="topic-body">
+        <ul>
+          <li><strong>RakuThrough 本番公開</strong>
+            <ul>
+              <li><code>dev/index.html</code> のDEV_MODEコード3箇所を削除（URLパラメータによるログインスキップ・pro強制）</li>
+              <li><code>dev/index.html</code> → <code>rakuthrough-git/app/index.html</code> にコピーしてpush</li>
+              <li>旧メンテナンスページを <code>app/maintenance.html</code> として保存（次回メンテ用）</li>
+              <li>devlogにメンテナンス手順カードを追加（このページ上部の黄色いカード）</li>
+            </ul>
+          </li>
+          <li><strong>LP法的リンク整備</strong>：RakuThrough・RakuNovel・〆スケ・EasyReply・Rakutto の5本フッターに
+            プライバシーポリシー・特定商取引法のリンクを追加してpush。
+            （EasyReplyは<code>#</code>空リンクを本番URLに修正、RakuNovelはCSS追加、〆スケはauth-test→mainにcherry-pick）
+          </li>
+          <li><strong>inventory フィールド名確定</strong>：<code>open / purchase / close</code>（PatternB採用）
+            → RakuThrough側変更なし、Rakutto実装時にこの名前で書き込む</li>
+          <li><strong>税理士相談資料作成</strong>（<code>docs/税理士相談資料_20260609.html</code>）
+            <ul>
+              <li>HP文言5項目（「複式簿記を自動仕訳」「節税もバッチリ」等）の確認依頼</li>
+              <li>青色申告65万円控除 要件チェック表（P/L・B/S対応済み、e-Tax連携・仕訳帳フォーマットは要確認）</li>
+            </ul>
+          </li>
+          <li><strong>/backup スラッシュコマンド新設</strong>（<code>~/.claude/commands/backup.md</code>）
+            → セッションログ同梱のバックアップを1コマンドで作成できる
+          </li>
+        </ul>
+        <div class="decided">
+          本番公開順序：「Webhook確認後に公開」ではなく「公開 → 購入待ち → Webhook確認」が正しい（公開しないと購入者が来ないため）
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">検討してやめたこと</div>
+      <div class="topic-body">
+        <ul>
+          <li><span class="tag tag-orange">⚠ ボツ</span><strong>inventory フィールド名 PatternA</strong>（openingStock/purchases/closingStock に統一）
+            → Rakuttoは未実装なので合わせるコストゼロ。RakuThrough側の変更・移行リスクを避けるためPatternBを採用。</li>
+          <li><span class="tag tag-orange">⚠ ボツ</span><strong>/devlog にバックアップ機能を混ぜる案</strong>
+            → devlog（HTML更新）とbackup（フォルダコピー）は目的が異なるため別コマンドに分離。</li>
+          <li><span class="tag tag-orange">⚠ ボツ</span><strong>Webhook確認後に本番公開する案</strong>
+            → アプリが公開されないと誰も購入できないため本末転倒。</li>
+        </ul>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">残タスク・要相談</div>
+      <div class="topic-body">
+        <ul>
+          <li>【高】<strong>税理士相談資料を印刷</strong>（Ctrl+P）→ 四日市/三重の税理士事務所に持参
+            <br><code>C:\Users\iwill\rakuthrough\docs\税理士相談資料_20260609.html</code></li>
+          <li>【高】本番購入者が来たら Firestore で <code>users/{uid}.plan</code> 更新を目視確認（Webhook確認）</li>
+          <li>【中】Rakuttoバッジ動作確認（<code>lastSyncedFrom:'rakutto'</code>付きデータで申告サマリー表示確認）</li>
+          <li>【後】税理士の指摘を踏まえたHP文言修正</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="note-hint">💡 本番公開済み。次：税理士相談資料を印刷して持参・購入者来たらWebhook確認</p>
+  </div>
+
   <!-- 2026-06-08 -->
   <div class="entry">
     <div class="date">2026年6月8日</div>
