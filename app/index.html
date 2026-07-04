@@ -1379,8 +1379,8 @@ window.submitEntry = async () => {
     const now   = new Date();
     const ym    = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const count = allTransactions.filter(t => t.createdAt?.slice(0, 7) === ym).length;
-    if (count >= 10) {
-      showUpgradeModal('今月の入力件数（10件）に達しました。無制限に使うには有料プランへ。', 'pro');
+    if (count >= 7) {
+      showUpgradeModal('今月の入力件数（7件）に達しました。無制限に使うには有料プランへ。', 'pro');
       return;
     }
   }
