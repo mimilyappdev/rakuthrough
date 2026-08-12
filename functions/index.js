@@ -1,11 +1,11 @@
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 const { initializeApp } = require('firebase-admin/app');
-const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestore');
 
 initializeApp();
 
-const stripeSecretKey    = defineSecret('STRIPE_SECRET_KEY');
+const stripeSecretKey = defineSecret('STRIPE_SECRET_KEY');
 const stripeWebhookSecret = defineSecret('STRIPE_WEBHOOK_SECRET');
 
 const PRICE_PLAN_MAP = {
@@ -15,34 +15,80 @@ const PRICE_PLAN_MAP = {
   'price_1TeFKpRXW1evPVMU5QSgaMur': { plan: 'export',   billing: 'once'    },
 };
 
-// Stripe Checkout セッション作成（フロントから呼ぶ）
+function getBillingRef(db, uid) {
+  return db.collection('users').doc(uid).collection('billing').doc('rakuthrough');
+}
+
+function getSubscriptionId(invoice) {
+  const value = invoice.parent?.subscription_details?.subscription ?? invoice.subscription;
+  if (!value) return null;
+  return typeof value === 'string' ? value : value.id;
+}
+
+function getSubscriptionExpiry(subscription) {
+  const periodEnd = subscription.items?.data[0]?.current_period_end
+    ?? subscription.current_period_end;
+  if (periodEnd) return new Date(periodEnd * 1000).toISOString();
+
+  const priceId = subscription.items?.data[0]?.price?.id;
+  const planInfo = PRICE_PLAN_MAP[priceId];
+  const expiry = new Date();
+  if (planInfo?.billing === 'monthly') expiry.setMonth(expiry.getMonth() + 1);
+  if (planInfo?.billing === 'yearly') expiry.setFullYear(expiry.getFullYear() + 1);
+  return expiry.toISOString();
+}
+
+async function getUidFromSubscription(stripe, subscription) {
+  if (subscription.metadata?.app === 'rakuthrough' && subscription.metadata?.firebaseUid) {
+    return subscription.metadata.firebaseUid;
+  }
+
+  const customerId = typeof subscription.customer === 'string'
+    ? subscription.customer
+    : subscription.customer?.id;
+  if (!customerId) return null;
+  const customer = await stripe.customers.retrieve(customerId);
+  if (customer.deleted) return null;
+  return customer.metadata?.firebaseUid ?? null;
+}
+
 exports.createCheckoutSession = onCall(
   { secrets: [stripeSecretKey] },
   async (request) => {
-    if (!request.auth) throw new HttpsError('unauthenticated', 'ログインが必要です');
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Login is required.');
 
     const { priceId, successUrl, cancelUrl } = request.data;
     const uid = request.auth.uid;
     const planInfo = PRICE_PLAN_MAP[priceId];
-    if (!planInfo) throw new HttpsError('invalid-argument', '無効なプランです');
+    if (!planInfo) throw new HttpsError('invalid-argument', 'Invalid plan.');
 
     const stripe = require('stripe')(stripeSecretKey.value());
     const db = getFirestore();
+    const billingRef = getBillingRef(db, uid);
+    const billingDoc = await billingRef.get();
+    let customerId = billingDoc.data()?.stripeCustomerId;
 
-    // Stripe カスタマーを取得または作成
-    const userDoc = await db.collection('users').doc(uid).get();
-    let customerId = userDoc.data()?.stripeCustomerId;
     if (!customerId) {
-      const customer = await stripe.customers.create({ metadata: { firebaseUid: uid } });
+      const customer = await stripe.customers.create({
+        metadata: { firebaseUid: uid, app: 'rakuthrough' },
+      });
       customerId = customer.id;
-      await db.collection('users').doc(uid).set({ stripeCustomerId: customerId }, { merge: true });
+      await billingRef.set({
+        stripeCustomerId: customerId,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
     }
 
+    const isSubscription = planInfo.billing !== 'once';
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
-      mode: planInfo.billing === 'once' ? 'payment' : 'subscription',
+      mode: isSubscription ? 'subscription' : 'payment',
       line_items: [{ price: priceId, quantity: 1 }],
       client_reference_id: uid,
+      metadata: { firebaseUid: uid, app: 'rakuthrough' },
+      ...(isSubscription ? {
+        subscription_data: { metadata: { firebaseUid: uid, app: 'rakuthrough' } },
+      } : {}),
       success_url: successUrl,
       cancel_url: cancelUrl,
     });
@@ -51,7 +97,42 @@ exports.createCheckoutSession = onCall(
   }
 );
 
-// Stripe Webhook 受信
+exports.createCustomerPortalSession = onCall(
+  { secrets: [stripeSecretKey] },
+  async (request) => {
+    if (!request.auth) throw new HttpsError('unauthenticated', 'Login is required.');
+
+    const returnUrl = request.data?.returnUrl;
+    if (typeof returnUrl !== 'string') {
+      throw new HttpsError('invalid-argument', 'A return URL is required.');
+    }
+    let parsedReturnUrl;
+    try {
+      parsedReturnUrl = new URL(returnUrl);
+    } catch {
+      throw new HttpsError('invalid-argument', 'Invalid return URL.');
+    }
+    const isLocal = parsedReturnUrl.hostname === 'localhost' || parsedReturnUrl.hostname === '127.0.0.1';
+    if (parsedReturnUrl.protocol !== 'https:' && !isLocal) {
+      throw new HttpsError('invalid-argument', 'Invalid return URL.');
+    }
+
+    const db = getFirestore();
+    const billingDoc = await getBillingRef(db, request.auth.uid).get();
+    const customerId = billingDoc.data()?.stripeCustomerId;
+    if (!customerId) {
+      throw new HttpsError('failed-precondition', 'No RakuThrough billing account was found.');
+    }
+
+    const stripe = require('stripe')(stripeSecretKey.value());
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: returnUrl,
+    });
+    return { url: session.url };
+  }
+);
+
 exports.stripeWebhook = onRequest(
   { secrets: [stripeSecretKey, stripeWebhookSecret] },
   async (req, res) => {
@@ -69,61 +150,108 @@ exports.stripeWebhook = onRequest(
     }
 
     const db = getFirestore();
+    const eventRef = db.doc(`stripeApps/rakuthrough/events/${event.id}`);
+    const eventDoc = await eventRef.get();
+    if (eventDoc.data()?.status === 'processed') return res.status(200).send('OK');
 
-    // 一時購入（lifetime / export）
-    if (event.type === 'checkout.session.completed' && event.data.object.mode === 'payment') {
+    const markProcessed = () => eventRef.set({
+      type: event.type,
+      status: 'processed',
+      processedAt: FieldValue.serverTimestamp(),
+      expiresAt: Timestamp.fromMillis(Date.now() + 90 * 24 * 60 * 60 * 1000),
+    }, { merge: true });
+
+    if (event.type === 'checkout.session.completed') {
       const session = await stripe.checkout.sessions.retrieve(event.data.object.id, {
         expand: ['line_items'],
       });
       const uid = session.client_reference_id;
       const priceId = session.line_items?.data[0]?.price?.id;
       const planInfo = PRICE_PLAN_MAP[priceId];
-      if (!uid || !planInfo) return res.status(200).send('OK');
-
-      const update = { plan: planInfo.plan, updatedAt: FieldValue.serverTimestamp() };
-      if (planInfo.plan === 'export') {
-        // その年の12月31日まで有効
-        update.planExpiry = new Date(new Date().getFullYear(), 11, 31).toISOString();
+      if (!uid || !planInfo) {
+        await markProcessed();
+        return res.status(200).send('OK');
       }
-      await db.collection('users').doc(uid).set(update, { merge: true });
+
+      const customerId = typeof session.customer === 'string'
+        ? session.customer
+        : session.customer?.id;
+      const update = {
+        stripeCustomerId: customerId,
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      if (session.mode === 'payment') {
+        update.plan = planInfo.plan;
+        update.subscriptionStatus = 'active';
+        if (planInfo.plan === 'export') {
+          update.planExpiry = new Date(new Date().getFullYear(), 11, 31).toISOString();
+        }
+      }
+      await getBillingRef(db, uid).set(update, { merge: true });
+      if (customerId) {
+        await db.doc(`stripeApps/rakuthrough/customers/${customerId}`).set({
+          uid,
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
     }
 
-    // サブスク支払い成功（初回・更新どちらも）
-    if (event.type === 'invoice.payment_succeeded' && event.data.object.subscription) {
+    if (event.type === 'invoice.payment_succeeded') {
       const invoice = event.data.object;
-      const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
+      const subscriptionId = getSubscriptionId(invoice);
+      if (!subscriptionId) {
+        await markProcessed();
+        return res.status(200).send('OK');
+      }
+
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       const priceId = subscription.items.data[0]?.price?.id;
       const planInfo = PRICE_PLAN_MAP[priceId];
-      if (!planInfo || planInfo.billing === 'once') return res.status(200).send('OK');
+      if (!planInfo || planInfo.billing === 'once') {
+        await markProcessed();
+        return res.status(200).send('OK');
+      }
 
-      const customer = await stripe.customers.retrieve(invoice.customer);
-      const uid = customer.metadata?.firebaseUid;
-      if (!uid) return res.status(200).send('OK');
+      const uid = await getUidFromSubscription(stripe, subscription);
+      if (!uid) {
+        await markProcessed();
+        return res.status(200).send('OK');
+      }
 
-      const expiry = new Date();
-      if (planInfo.billing === 'monthly') expiry.setMonth(expiry.getMonth() + 1);
-      if (planInfo.billing === 'yearly')  expiry.setFullYear(expiry.getFullYear() + 1);
-
-      await db.collection('users').doc(uid).set({
+      const customerId = typeof subscription.customer === 'string'
+        ? subscription.customer
+        : subscription.customer?.id;
+      await getBillingRef(db, uid).set({
         plan: 'pro',
-        planExpiry: expiry.toISOString(),
+        stripeCustomerId: customerId,
+        subscriptionStatus: 'active',
+        planExpiry: getSubscriptionExpiry(subscription),
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
     }
 
-    // サブスク解約 → free に戻す
     if (event.type === 'customer.subscription.deleted') {
-      const customer = await stripe.customers.retrieve(event.data.object.customer);
-      const uid = customer.metadata?.firebaseUid;
+      const subscription = event.data.object;
+      const priceId = subscription.items?.data[0]?.price?.id;
+      const planInfo = PRICE_PLAN_MAP[priceId];
+      if (!planInfo || planInfo.billing === 'once') {
+        await markProcessed();
+        return res.status(200).send('OK');
+      }
+
+      const uid = await getUidFromSubscription(stripe, subscription);
       if (uid) {
-        await db.collection('users').doc(uid).set({
+        await getBillingRef(db, uid).set({
           plan: 'free',
+          stripeCustomerId: FieldValue.delete(),
+          subscriptionStatus: 'canceled',
           planExpiry: null,
           updatedAt: FieldValue.serverTimestamp(),
         }, { merge: true });
       }
     }
 
-    res.status(200).send('OK');
+    await markProcessed();
+    return res.status(200).send('OK');
   }
 );

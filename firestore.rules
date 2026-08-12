@@ -10,6 +10,13 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function legacyBillingFields() {
+      return [
+        "plan", "stripeCustomerId", "planExpiry",
+        "subscriptionStatus", "paidEventIds"
+      ];
+    }
+
     function validEntry(e) {
       return e is map
         && e.account is string
@@ -88,7 +95,20 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && !request.resource.data.keys().hasAny(legacyBillingFields());
+      allow update: if isOwner(userId)
+        && !request.resource.data.diff(resource.data)
+          .affectedKeys()
+          .hasAny(legacyBillingFields());
+      allow delete: if isOwner(userId);
+    }
+
+    match /users/{userId}/billing/{appId} {
+      allow read: if isOwner(userId)
+        && appId in ["rakutto", "rakuthrough"];
+      allow write: if false;
     }
 
     match /users/{userId}/transactions/{txId} {
