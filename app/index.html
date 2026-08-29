@@ -88,6 +88,10 @@ body {
 .auth-logo { width: 64px; height: 64px; background: var(--accent); border-radius: 18px; display: flex; align-items: center; justify-content: center; margin-bottom: 24px; }
 .auth-logo svg { width: 32px; height: 32px; }
 .auth-sub { font-size: 14px; color: var(--ink2); text-align: center; margin-bottom: 40px; line-height: 1.6; }
+.migration-notice { width: min(100%, 560px); margin: 0 auto 20px; padding: 12px 16px; border: 1px solid rgba(26,86,219,.22); border-radius: 12px; background: rgba(219,234,254,.55); color: var(--ink2); font-size: 13px; line-height: 1.7; text-align: left; }
+.migration-notice strong { color: var(--accent); }
+.migration-notice a { color: var(--accent); font-weight: 700; }
+.app-migration-notice { max-width: none; margin: 0; border-width: 0 0 1px; border-radius: 0; padding: 10px 20px; text-align: center; }
 .google-btn { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 24px; font-size: 15px; font-weight: 500; color: var(--ink); cursor: pointer; width: 100%; max-width: 300px; transition: background 0.15s, transform 0.1s; }
 .google-btn:hover { background: var(--surface2); }
 .google-btn:active { transform: scale(0.98); }
@@ -424,6 +428,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   <!-- キャッチコピー（3種ローテーション）-->
   <div id="catchcopy" style="font-family:'Zen Maru Gothic',sans-serif;font-size:14px;font-weight:700;color:#a8a79f;margin-bottom:48px;text-align:center;min-height:1.6em;transition:opacity 0.6s ease;">創作活動するあなたに確定申告ラクスルー！</div>
   <div class="auth-sub" style="margin-top:0;margin-bottom:24px;">青色申告対応の収支管理アプリ<br>Googleアカウントで簡単ログイン</div>
+  <div class="migration-notice"><strong>RakuThroughは新しいURLへ段階的に移行しています</strong><br>移行後も、これまでと同じGoogleアカウントでログインできます。保存済みのデータもそのままご利用いただけます。<br><a href="https://rakuthrough-app.netlify.app/">新しいRakuThroughを開く</a></div>
   <button class="google-btn" id="login-btn">
     <svg width="20" height="20" viewBox="0 0 48 48">
       <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -437,6 +442,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 
 <!-- メインアプリ -->
 <div id="app">
+  <div class="migration-notice app-migration-notice"><strong>RakuThroughは新しいURLへ段階的に移行しています。</strong> ログイン情報と保存済みのデータはそのままです。<a href="https://rakuthrough-app.netlify.app/">新しいRakuThroughを開く</a></div>
   <div class="header">
     <div class="header-left">
       <div class="header-logo">
