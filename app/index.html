@@ -436,7 +436,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   <!-- キャッチコピー（3種ローテーション）-->
   <div id="catchcopy" style="font-family:'Zen Maru Gothic',sans-serif;font-size:14px;font-weight:700;color:#a8a79f;margin-bottom:48px;text-align:center;min-height:1.6em;transition:opacity 0.6s ease;">創作活動するあなたに確定申告ラクスルー！</div>
   <div class="auth-sub" style="margin-top:0;margin-bottom:24px;">青色申告対応の収支管理アプリ<br>Googleアカウントで簡単ログイン</div>
-  <div class="migration-notice"><strong>RakuThroughは新しいURLへ段階的に移行しています</strong><br>移行後も、これまでと同じGoogleアカウントでログインできます。保存済みのデータもそのままご利用いただけます。<br><a href="https://rakuthrough-app.netlify.app/">新しいRakuThroughを開く</a></div>
+  <div class="migration-notice"><strong>RakuThroughは新しいURLへ移行しています</strong><br>これまでと同じGoogleアカウントでログインすると、保存済みデータとご利用中のプランをそのまま使えます。<br>① 新しいRakuThroughを開いて、データをご確認ください<br>② 確認後、新しいURLをブックマークまたはホーム画面へ追加してください<br><a href="https://rakuthrough-app.netlify.app/">新しいRakuThroughを開く</a><br>※確認が終わるまで、現在のブックマーク・ホーム画面アイコンは削除しないでください。</div>
   <button class="google-btn" id="login-btn">
     <svg width="20" height="20" viewBox="0 0 48 48">
       <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -450,7 +450,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 
 <!-- メインアプリ -->
 <div id="app">
-  <div class="migration-notice app-migration-notice"><strong>RakuThroughは新しいURLへ段階的に移行しています。</strong> ログイン情報と保存済みのデータはそのままです。<a href="https://rakuthrough-app.netlify.app/">新しいRakuThroughを開く</a></div>
+  <div class="migration-notice app-migration-notice"><strong>RakuThroughは新しいURLへ移行しています。</strong> これまでと同じGoogleアカウントで、保存済みデータとご利用中のプランをそのまま使えます。新しいURLでデータを確認後、ブックマークまたはホーム画面へ追加してください。<a href="https://rakuthrough-app.netlify.app/">新しいRakuThroughを開く</a> ※確認が終わるまで、現在のブックマーク・ホーム画面アイコンは削除しないでください。</div>
   <div class="header">
     <div class="header-left">
       <div class="header-logo">
@@ -1147,11 +1147,23 @@ function userCol(name) {
 // ============================================================
 // ====== スキーマ移行（Ver.5.1 → Ver.7.0）======
 // 対象フィールド：walletType / paymentMethod / status / debit / credit
-// 既存データは全件 settled / personal にデフォルト設定
+// 既存値を保持し、未設定項目だけ旧データ向け既定値で補完
 // ============================================================
 async function migrateTransactions() {
-  // fiscalYear 未設定のデータも移行対象に含める
-  const targets = allTransactions.filter(tx => tx.walletType === undefined || tx.fiscalYear === undefined);
+  const hasValidEntry = entry =>
+    entry && typeof entry === 'object'
+    && typeof entry.account === 'string' && entry.account.trim() !== ''
+    && typeof entry.amount === 'number' && Number.isFinite(entry.amount) && entry.amount > 0;
+
+  // 未設定項目と、旧形式（amount なし）の仕訳を移行対象に含める
+  const targets = allTransactions.filter(tx =>
+    tx.walletType === undefined
+    || tx.paymentMethod === undefined
+    || tx.status === undefined
+    || tx.fiscalYear === undefined
+    || !hasValidEntry(tx.debit)
+    || !hasValidEntry(tx.credit)
+  );
   if (!targets.length) {
     console.log('✅ スキーマ移行不要（全データが最新済み）');
     return;
@@ -1162,21 +1174,66 @@ async function migrateTransactions() {
   for (const tx of targets) {
     const updates = {};
 
-    // walletType: 旧データは全員「個人財布」扱いでデフォルト設定
-    updates.walletType = 'personal';
+    // Rules で拒否されるデータは送信せず、元データを保持する
+    const amountIsValid = typeof tx.amount === 'number' && Number.isFinite(tx.amount) && tx.amount > 0;
+    const datePart = typeof tx.date === 'string' ? tx.date.slice(0, 10) : '';
+    const parsedDate = new Date(datePart + 'T00:00:00Z');
+    const dateIsValid = /^\d{4}-\d{2}-\d{2}$/.test(datePart)
+      && Number.isFinite(parsedDate.getTime()) && parsedDate.toISOString().slice(0, 10) === datePart;
+    const typeIsValid = tx.type === 'income' || tx.type === 'expense';
+    const createdAtExists = tx.createdAt !== undefined && tx.createdAt !== null;
+    if (!amountIsValid || !dateIsValid || !typeIsValid || !createdAtExists) {
+      console.warn(`移行スキップ ${tx.id}: 必須項目（amount/date/type/createdAt）を確認してください`);
+      continue;
+    }
 
-    // paymentMethod: 旧 payment フィールドを引き継ぎ
-    updates.paymentMethod = tx.payment || 'cash';
+    const walletTypes = ['personal', 'business'];
+    const paymentMethods = ['cash', 'card'];
+    const statuses = ['pending', 'settled', 'canceled', 'refunded'];
 
-    // status: 旧データは全件「入金済み（settled）」に設定
-    updates.status = 'settled';
+    if (tx.walletType !== undefined && !walletTypes.includes(tx.walletType)) {
+      console.warn(`移行スキップ ${tx.id}: walletType が不正です`);
+      continue;
+    }
+    if (tx.paymentMethod !== undefined && !paymentMethods.includes(tx.paymentMethod)) {
+      console.warn(`移行スキップ ${tx.id}: paymentMethod が不正です`);
+      continue;
+    }
+    if (tx.status !== undefined && !statuses.includes(tx.status)) {
+      console.warn(`移行スキップ ${tx.id}: status が不正です`);
+      continue;
+    }
+    if (tx.fiscalYear !== undefined && !Number.isInteger(tx.fiscalYear)) {
+      console.warn(`移行スキップ ${tx.id}: fiscalYear が不正です`);
+      continue;
+    }
 
-    // debit / credit: 移行時の自動仕訳（後から手動編集可能）
-    updates.debit  = autoDebit(tx.type, 'personal', 'settled', tx.categoryName || '');
-    updates.credit = autoCredit(tx.type, 'personal', tx.categoryName || '');
+    // 既存値を保持し、未設定項目だけ旧データ向け既定値で補完
+    const walletType = tx.walletType ?? 'personal';
+    const legacyPayment = paymentMethods.includes(tx.payment) ? tx.payment : 'cash';
+    const paymentMethod = tx.paymentMethod ?? legacyPayment;
+    const status = tx.status ?? 'settled';
+
+    if (tx.walletType === undefined) updates.walletType = walletType;
+    if (tx.paymentMethod === undefined) updates.paymentMethod = paymentMethod;
+    if (tx.status === undefined) updates.status = status;
+
+    // 正常な既存仕訳は保持し、旧形式の仕訳には取引金額を補完
+    if (!hasValidEntry(tx.debit)) {
+      const debit = tx.debit && typeof tx.debit.account === 'string' && tx.debit.account.trim() !== ''
+        ? { ...tx.debit }
+        : autoDebit(tx.type, walletType, status, tx.categoryName || '');
+      updates.debit = { ...debit, amount: tx.amount };
+    }
+    if (!hasValidEntry(tx.credit)) {
+      const credit = tx.credit && typeof tx.credit.account === 'string' && tx.credit.account.trim() !== ''
+        ? { ...tx.credit }
+        : autoCredit(tx.type, walletType, tx.categoryName || '');
+      updates.credit = { ...credit, amount: tx.amount };
+    }
 
     // fiscalYear: date フィールドから年度を補完
-    if (tx.fiscalYear === undefined && tx.date) {
+    if (tx.fiscalYear === undefined) {
       updates.fiscalYear = parseInt(tx.date.slice(0, 4));
     }
 
