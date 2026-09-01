@@ -434,8 +434,8 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
   <div style="font-family:'Nunito',sans-serif;font-weight:900;font-size:36px;color:#1a56db;letter-spacing:-0.5px;margin-bottom:4px;">RakuThrough</div>
   <div style="font-family:'Zen Maru Gothic',sans-serif;font-weight:700;font-size:13px;color:#6b7280;letter-spacing:4px;margin-bottom:20px;">ラクスルー</div>
   <!-- キャッチコピー（3種ローテーション）-->
-  <div id="catchcopy" style="font-family:'Zen Maru Gothic',sans-serif;font-size:14px;font-weight:700;color:#a8a79f;margin-bottom:48px;text-align:center;min-height:1.6em;transition:opacity 0.6s ease;">創作活動するあなたに確定申告ラクスルー！</div>
-  <div class="auth-sub" style="margin-top:0;margin-bottom:24px;">青色申告対応の収支管理アプリ<br>Googleアカウントで簡単ログイン</div>
+  <div id="catchcopy" style="font-family:'Zen Maru Gothic',sans-serif;font-size:14px;font-weight:700;color:#a8a79f;margin-bottom:48px;text-align:center;min-height:1.6em;transition:opacity 0.6s ease;">創作活動するあなたの申告準備をラクスルー！</div>
+  <div class="auth-sub" style="margin-top:0;margin-bottom:24px;">白色、青色申告に向けた日々の収支を記録・整理できるアプリ<br>Googleアカウントで簡単ログイン</div>
   <div class="migration-notice"><strong>RakuThroughは新しいURLへ移行しています</strong><br>これまでと同じGoogleアカウントでログインすると、保存済みデータとご利用中のプランをそのまま使えます。<br>① 新しいRakuThroughを開いて、データをご確認ください<br>② 確認後、新しいURLをブックマークまたはホーム画面へ追加してください<br><a href="https://rakuthrough-app.netlify.app/">新しいRakuThroughを開く</a><br>※確認が終わるまで、現在のブックマーク・ホーム画面アイコンは削除しないでください。</div>
   <button class="google-btn" id="login-btn">
     <svg width="20" height="20" viewBox="0 0 48 48">
@@ -686,7 +686,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
         <div id="inventory-result" style="display:none;margin-top:12px;padding:12px;background:var(--accent-light);border-radius:var(--radius-sm);border:1px solid rgba(26,86,219,0.2)">
           <div style="font-size:12px;color:var(--ink2);margin-bottom:4px">売上原価（自動計算）</div>
           <div id="inventory-cogs" style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--accent)">¥0</div>
-          <div style="font-size:11px;color:var(--ink3);margin-top:6px">📍 青色申告決算書「売上原価」欄に記入してください</div>
+          <div style="font-size:11px;color:var(--ink3);margin-top:6px">📍 青色申告決算書への転記を検討する際の参考値です</div>
         </div>
         <button onclick="saveInventory()" style="margin-top:12px;width:100%;padding:10px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;font-family:'Noto Sans JP',sans-serif">保存する</button>
       </div>
@@ -703,7 +703,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
       <div style="padding:4px 0 0">
         <p style="font-size:12px;color:var(--ink2);margin-bottom:4px;line-height:1.7">
           10万円以上のPC・iPad・機材などを登録。<br>
-          <b>青色申告なら40万円未満は一括経費OK</b>（少額特例・2026年改正・2028年3月末まで）
+          <b>少額減価償却資産の特例を検討する場合の参考機能です</b>
         </p>
         <p style="font-size:11px;color:var(--ink3);margin-bottom:14px;padding:8px 10px;background:var(--amber-light);border-radius:8px;border:1px solid rgba(184,134,11,0.2)">
           ⚠️ 計算はあくまで目安です。確定申告前に税務署・税理士へご確認ください。
@@ -736,7 +736,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
             <div id="special-flag-wrap" style="display:none">
               <label class="special-check-row" for="asset-special">
                 <input type="checkbox" id="asset-special" onchange="previewAsset()">
-                <span class="special-check-label">✨ 少額減価償却の特例を使う（40万円未満・青色申告者のみ）<br><span style="font-size:11px;font-weight:400">取得年度に全額を一括経費にできます</span></span>
+                <span class="special-check-label">✨ 少額減価償却資産の特例を検討する（青色申告者向け・適用条件あり）<br><span style="font-size:11px;font-weight:400">適用可否は国税庁・税務署・税理士へご確認ください</span></span>
               </label>
             </div>
             <div class="asset-preview" id="asset-preview"></div>
@@ -829,10 +829,10 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
       </div>
     </div>
 
-    <!-- ⑦ 申告サマリー（確定申告用・年1回）-->
+    <!-- ⑦ 申告準備サマリー（参考・年1回）-->
     <div class="settings-section">
       <button class="accordion-header" onclick="openTaxSummary(this)">
-        <div class="accordion-title-wrap"><span>📋</span><span class="accordion-title">申告サマリー（確定申告用）</span><span id="tax-summary-lock" style="display:none;font-size:11px;color:var(--ink3);margin-left:6px">🔒 有料</span></div>
+        <div class="accordion-title-wrap"><span>📋</span><span class="accordion-title">申告準備サマリー（参考）</span><span id="tax-summary-lock" style="display:none;font-size:11px;color:var(--ink3);margin-left:6px">🔒 有料</span></div>
         <span class="accordion-arrow">▼</span>
       </button>
       <div class="accordion-body">
@@ -1002,7 +1002,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
       <button onclick="startCheckout('price_1TeFKpRXW1evPVMU5QSgaMur')" style="width:100%;padding:14px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);text-align:left;cursor:pointer;font-family:'Noto Sans JP',sans-serif;margin-bottom:8px">
         <div style="font-size:13px;font-weight:700">収支出力のみ</div>
         <div style="font-size:20px;font-weight:700;margin:2px 0">¥1,500 <span style="font-size:12px;font-weight:400">/年</span></div>
-        <div style="font-size:11px;opacity:0.85">確定申告書類の出力だけしたい方向け</div>
+        <div style="font-size:11px;opacity:0.85">申告準備用の参考資料を出力したい方向け</div>
       </button>
       <button onclick="showUpgradeProPlans()" style="width:100%;padding:12px;background:var(--surface);color:var(--ink2);border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;cursor:pointer;font-family:'Noto Sans JP',sans-serif">全機能プランを見る</button>
     </div>
@@ -1915,7 +1915,7 @@ window.calcWithholding = () => {
   result.innerHTML = `
     💡 <b>受取額 ¥${received.toLocaleString()}</b> から逆算<br>
     売上（額面）：<b>¥${gross.toLocaleString()}</b>　／　源泉税：¥${tax.toLocaleString()}
-    <br><span style="font-size:11px;color:#9ca3af">確定申告で¥${tax.toLocaleString()}が戻ってきます</span>`;
+    <br><span style="font-size:11px;color:#9ca3af">源泉徴収税額の参考表示：¥${tax.toLocaleString()}</span>`;
   result.classList.add('show');
 };
 
@@ -2083,9 +2083,9 @@ restoreTheme();
 
 // ====== キャッチコピーローテーション ======
 const CATCHCOPIES = [
-  '創作活動するあなたに確定申告ラクスルー！',
-  '配信活動するあなたに確定申告ラクスルー！',
-  '副業を頑張るあなたに確定申告ラクスルー！',
+  '創作活動するあなたの申告準備をラクスルー！',
+  '配信活動するあなたの申告準備をラクスルー！',
+  '副業を頑張るあなたの申告準備をラクスルー！',
 ];
 let catchcopyIndex = 0;
 function rotateCatchcopy() {
@@ -2685,7 +2685,7 @@ window.printSummary = () => {
     <div style="font-family:'Hiragino Kaku Gothic ProN','Meiryo',sans-serif;max-width:600px;margin:0 auto;color:#1a1a18;padding:20px;">
       <div style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid #1a1a18;">
         <div style="font-size:11px;color:#6b6a64;margin-bottom:4px">RakuThrough 申告サマリー</div>
-        <div style="font-size:20px;font-weight:700">${year}年度 確定申告用資料</div>
+        <div style="font-size:20px;font-weight:700">${year}年度 確定申告の準備用参考資料</div>
         <div style="font-size:11px;color:#6b6a64;margin-top:4px">出力日: ${today}</div>
       </div>
       <div style="margin-bottom:20px;padding:14px;border:1px solid #ddd;border-radius:8px;">
