@@ -166,6 +166,14 @@ service cloud.firestore {
       allow read, write: if isOwner(userId);
     }
 
+    match /users/{userId}/eventSummary/{id} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /users/{userId}/consignmentMonthly/{id} {
+      allow read, write: if isOwner(userId);
+    }
+
     match /system_configs/{configId} {
       allow read:  if true;
       allow write: if false;

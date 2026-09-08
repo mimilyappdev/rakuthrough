@@ -132,6 +132,42 @@
     </div>
   </div>
 
+  <!-- 2026-09-08 -->
+  <div class="entry">
+    <div class="date">2026年9月8日</div>
+    <div class="entry-title">Rakutto Firestoreルール不足のローカル修正・コミット前バックアップ</div>
+
+    <div class="topic">
+      <div class="topic-label">やったこと</div>
+      <div class="topic-body">
+        <ul>
+          <li><code>users/{userId}/eventSummary/{id}</code> に、本人限定のread/writeルールを追加。</li>
+          <li><code>users/{userId}/consignmentMonthly/{id}</code> に、本人限定のread/writeルールを追加。</li>
+          <li>イベント集計の保存・読込・削除batchと、委託月次データの読込・保存がルール不足で拒否される問題を対象とした。</li>
+          <li>現在の <code>firestore.rules</code> を <code>backup/20260908_rakutto_rules_after_local_fix_before_commit/firestore.rules</code> に保存し、SHA-256一致を確認。</li>
+        </ul>
+        <div class="decided">
+          未認証子機の商品画像対応は <code>products</code> 全体をpublic readにせず、別課題として扱う。RakuThrough旧版の移行問題も今回の対象外。
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">確認状況・残タスク</div>
+      <div class="topic-body">
+        <ul>
+          <li><code>git diff --check -- firestore.rules</code> 成功。</li>
+          <li>Firestore EmulatorはJava未導入のため起動できず、ルール構文の実コンパイルは未確認。</li>
+          <li>commit・push・Firebase Rulesデプロイ・本番データ書込み確認は未実施。</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="note-hint">💡 次：差分確認後に対象ファイルを限定してcommit・push。Firebase Rulesデプロイは別の承認後に実施。</p>
+  </div>
+
   <!-- 2026-06-09 -->
   <div class="entry">
     <div class="date">2026年6月9日</div>
