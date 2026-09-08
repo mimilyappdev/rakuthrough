@@ -475,13 +475,13 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
       <button class="month-nav-btn" onclick="changeMonth(1)">›</button>
     </div>
 
-    <!-- サマリーカード（確定収支のみ）-->
+    <!-- サマリーカード（入金済みベース）-->
     <div class="summary-card">
-      <div class="summary-label">今月の利益（確定分）</div>
+      <div class="summary-label">今月登録分の収支（入金済み売上のみ）</div>
       <div class="summary-amount" id="summary-balance">¥0</div>
       <div class="summary-row">
         <div class="summary-sub">
-          <div class="summary-sub-label">収入</div>
+          <div class="summary-sub-label">入金済み売上</div>
           <div class="summary-sub-amount" id="summary-income">¥0</div>
         </div>
         <div class="summary-sub">
@@ -492,10 +492,10 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
     </div>
 
     <div class="chart-wrap">
-      <div class="section-title">月別収支（6ヶ月）</div>
+      <div class="section-title">月別登録分（6ヶ月）</div>
       <div class="chart-bars" id="chart-bars"></div>
       <div class="chart-legend">
-        <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>収入</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>入金済み売上</div>
         <div class="legend-item"><div class="legend-dot" style="background:var(--red);opacity:0.7"></div>経費</div>
       </div>
     </div>
@@ -853,7 +853,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
               <input class="form-input" type="number" id="opening-capital" placeholder="初年度のみ入力" inputmode="numeric" style="max-width:180px;margin:0">
               <button onclick="saveCapital()" style="padding:8px 14px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'Noto Sans JP',sans-serif;white-space:nowrap">保存</button>
             </div>
-            <div style="font-size:11px;color:var(--ink3);margin-top:6px">2年目以降は前年利益から自動計算されます</div>
+            <div style="font-size:11px;color:var(--ink3);margin-top:6px">自動締め・翌年繰越は現在停止中です。元入金は必要に応じて手動で入力してください。</div>
           </div>
 
           <!-- 家事按分 -->
@@ -871,15 +871,18 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
             <button onclick="postDepreciation()" id="deprec-post-btn" style="width:100%;padding:10px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'Noto Sans JP',sans-serif">今年分を経費に計上する</button>
           </div>
 
+          <div id="accounting-review" style="display:none;margin-bottom:14px;padding:14px;background:#fff7ed;border:1px solid #fdba74;border-radius:var(--radius-sm);color:#9a3412;font-size:12px;line-height:1.7"></div>
+
           <!-- P/L -->
           <div style="margin-bottom:14px;padding:14px;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border)">
-            <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:12px">損益計算書（P/L）</div>
+            <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:12px">損益の参考集計（P/L）</div>
             <div id="pl-table"></div>
           </div>
 
           <!-- B/S -->
           <div style="margin-bottom:14px;padding:14px;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border)">
-            <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:12px">貸借対照表（B/S）</div>
+            <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:4px">簡易残高（参考）</div>
+            <div style="font-size:11px;color:var(--ink3);margin-bottom:12px">正式な貸借対照表ではありません。事業主貸・事業主借などは反映していません。</div>
             <div id="bs-table"></div>
           </div>
 
@@ -891,8 +894,8 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
           <!-- 年次締め -->
           <div style="padding:14px;background:var(--surface);border-radius:var(--radius-sm);border:1px solid var(--border)">
             <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:8px">年次締め</div>
-            <div id="close-year-status" style="font-size:12px;color:var(--ink2);margin-bottom:10px;line-height:1.6">締めると翌年の期首元入金が自動で設定されます。締め後も確認ダイアログ経由で編集できます。</div>
-            <button id="close-year-btn" onclick="closeFiscalYear()" style="width:100%;padding:10px;background:#dc2626;color:white;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'Noto Sans JP',sans-serif">この年度を締める</button>
+            <div id="close-year-status" style="font-size:12px;color:var(--ink2);margin-bottom:10px;line-height:1.6">簡易残高は表示のみです。自動締め・翌年繰越は現在停止しています。</div>
+            <button id="close-year-btn" onclick="closeFiscalYear()" disabled style="width:100%;padding:10px;background:var(--ink3);color:white;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:not-allowed;font-family:'Noto Sans JP',sans-serif">自動締めは現在停止中</button>
           </div>
 
         </div>
@@ -1526,6 +1529,153 @@ window.submitEntry = async () => {
 // ====== ホームページ ======
 function fmt(n) { return '¥' + Math.round(n).toLocaleString(); }
 
+const ACCOUNTING_STATUSES = new Set(['pending', 'settled', 'canceled', 'refunded']);
+
+function txFiscalYear(tx) {
+  if (Number.isInteger(tx?.fiscalYear)) return tx.fiscalYear;
+  const year = parseInt(tx?.date?.slice(0, 4));
+  return Number.isInteger(year) ? year : null;
+}
+
+function isValidIsoDate(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value.slice(0, 10))) return false;
+  const date = new Date(value.slice(0, 10) + 'T00:00:00Z');
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value.slice(0, 10);
+}
+
+function txStatus(tx) {
+  return ACCOUNTING_STATUSES.has(tx?.status) ? tx.status : 'review';
+}
+
+function csvStatusLabel(tx) {
+  const labels = {
+    pending: '売掛',
+    settled: '入金済',
+    canceled: '取消',
+    refunded: '返金',
+    review: '要確認',
+  };
+  return labels[txStatus(tx)];
+}
+
+function isRecognizedIncome(tx) {
+  const status = txStatus(tx);
+  return tx?.type === 'income' && (status === 'pending' || status === 'settled');
+}
+
+function isPaidIncome(tx) {
+  return tx?.type === 'income' && txStatus(tx) === 'settled';
+}
+
+function isRecognizedExpense(tx) {
+  return tx?.type === 'expense' && txStatus(tx) === 'settled';
+}
+
+function getMonthlyRegistrationSummary(year, monthIndex) {
+  const key = `${year}-${String(monthIndex + 1).padStart(2, '0')}`;
+  const monthTx = allTransactions.filter(tx =>
+    typeof tx?.date === 'string' && tx.date.startsWith(key)
+  );
+  return {
+    paidIncome: monthTx.filter(isPaidIncome).reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0),
+    pendingIncome: monthTx
+      .filter(tx => tx?.type === 'income' && txStatus(tx) === 'pending')
+      .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0),
+    expense: monthTx.filter(isRecognizedExpense).reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0),
+  };
+}
+
+function getReceivablesAtYearEnd(year, today = new Date().toISOString().slice(0, 10)) {
+  const cutoff = `${year}-12-31`;
+  let amount = 0;
+  const reviewItems = [];
+
+  allTransactions.forEach(tx => {
+    if (tx?.type !== 'income') return;
+    const date = tx?.date?.slice(0, 10);
+    if (!isValidIsoDate(date)) {
+      if (txFiscalYear(tx) !== null && txFiscalYear(tx) <= year) {
+        reviewItems.push({ tx, reason: '取引日を確認できない収入' });
+      }
+      return;
+    }
+    if (date > cutoff) return;
+
+    const status = txStatus(tx);
+    if (status === 'pending') {
+      amount += Number(tx.amount) || 0;
+      return;
+    }
+    if (status === 'refunded') {
+      reviewItems.push({ tx, reason: '返金時期を確認できない収入' });
+      return;
+    }
+    if (status === 'review') {
+      reviewItems.push({ tx, reason: '状態を確認できない収入' });
+      return;
+    }
+    if (status !== 'settled') return;
+
+    if (tx.settledAt) {
+      if (typeof tx.settledAt !== 'string') {
+        reviewItems.push({ tx, reason: '入金日が不明な収入' });
+        return;
+      }
+      const settledAt = tx.settledAt.slice(0, 10);
+      if (!isValidIsoDate(settledAt)) {
+        reviewItems.push({ tx, reason: '入金日が不明な収入' });
+      } else if (settledAt < date) {
+        reviewItems.push({ tx, reason: '入金日が売上日より前の収入' });
+      } else if (settledAt > cutoff) {
+        amount += Number(tx.amount) || 0;
+      }
+      return;
+    }
+
+    // 過去年末は、旧データに入金日がないと当時の売掛残高を再現できない。
+    if (cutoff < today) reviewItems.push({ tx, reason: '過去年末の入金日を確認できない収入' });
+  });
+
+  return { amount, reviewItems };
+}
+
+function getAccountingReview(year, today = new Date().toISOString().slice(0, 10)) {
+  const items = [];
+  const fyTx = allTransactions.filter(tx => txFiscalYear(tx) === year);
+
+  fyTx.forEach(tx => {
+    const status = txStatus(tx);
+    if (!isValidIsoDate(tx?.date)) items.push({ tx, reason: '取引日を確認できない取引' });
+    if (status === 'review') items.push({ tx, reason: '状態が未設定または不明な取引' });
+    if (status === 'refunded') items.push({ tx, reason: '返金日・返金額の確認が必要な取引' });
+    if (tx?.type === 'expense' && status === 'pending') {
+      items.push({ tx, reason: '経費に未入金状態が設定された取引' });
+    }
+  });
+
+  const receivables = getReceivablesAtYearEnd(year, today);
+  items.push(...receivables.reviewItems);
+
+  const inv = inventoryDataMap[year] || {};
+  if ((Number(inv.purchases) || 0) > 0) {
+    fyTx.filter(tx => tx?.type === 'expense' && txStatus(tx) === 'settled')
+      .filter(tx => /仕入/.test(tx.categoryName || '') || /仕入/.test(tx.desc || ''))
+      .forEach(tx => items.push({ tx, reason: '棚卸の仕入金額との二重計上確認が必要な経費' }));
+  }
+
+  const uniqueTransactions = [...new Set(items.map(item => item.tx))];
+  return {
+    count: uniqueTransactions.length,
+    incomeAmount: uniqueTransactions
+      .filter(tx => tx?.type === 'income')
+      .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0),
+    expenseAmount: uniqueTransactions
+      .filter(tx => tx?.type === 'expense')
+      .reduce((sum, tx) => sum + (Number(tx.amount) || 0), 0),
+    reasons: [...new Set(items.map(item => item.reason))],
+  };
+}
+
 window.changeMonth = (dir) => {
   currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + dir, 1);
   updateHome();
@@ -1536,26 +1686,12 @@ function updateHome() {
   const y   = currentMonth.getFullYear();
   const m   = currentMonth.getMonth();
   document.getElementById('month-label').textContent = `${y}年${m+1}月`;
-  const key = `${y}-${String(m+1).padStart(2,'0')}`;
+  const { paidIncome, expense } = getMonthlyRegistrationSummary(y, m);
 
-  const monthTx = allTransactions.filter(t => t.date.startsWith(key));
-
-  // 収入：settled（確定）と pending（売掛）を分けて集計
-  const settledIncome = monthTx
-    .filter(t => t.type === 'income' && t.status !== 'pending')
-    .reduce((s, t) => s + t.amount, 0);
-  const pendingIncome = monthTx
-    .filter(t => t.type === 'income' && t.status === 'pending')
-    .reduce((s, t) => s + t.amount, 0);
-
-  const expense = monthTx
-    .filter(t => t.type === 'expense')
-    .reduce((s, t) => s + t.amount, 0);
-
-  // サマリーカードは確定分のみ表示（利益 = 確定収入 - 経費）
-  document.getElementById('summary-income').textContent  = fmt(settledIncome);
+  // 売った日・使った日の登録月別。実際の入出金月を示すものではない。
+  document.getElementById('summary-income').textContent  = fmt(paidIncome);
   document.getElementById('summary-expense').textContent = fmt(expense);
-  document.getElementById('summary-balance').textContent = fmt(settledIncome - expense);
+  document.getElementById('summary-balance').textContent = fmt(paidIncome - expense);
 
   renderChart();
   renderPending();
@@ -1568,10 +1704,9 @@ function renderChart() {
   const data = [];
   for (let i = 5; i >= 0; i--) {
     const d   = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    const txs = allTransactions.filter(t => t.date.startsWith(key));
-    const inc = txs.filter(t => t.type === 'income').reduce((s,t)  => s+t.amount, 0);
-    const exp = txs.filter(t => t.type === 'expense').reduce((s,t) => s+t.amount, 0);
+    const summary = getMonthlyRegistrationSummary(d.getFullYear(), d.getMonth());
+    const inc = summary.paidIncome;
+    const exp = summary.expense;
     maxVal = Math.max(maxVal, inc, exp);
     data.push({ month: `${d.getMonth()+1}月`, inc, exp });
   }
@@ -1981,7 +2116,7 @@ window.exportCSV = () => {
   const rows   = allTransactions.map(t => {
     const pm  = t.paymentMethod || t.payment || 'cash';
     const wt  = t.walletType === 'business' ? '事業' : '個人';
-    const st  = t.status === 'pending' ? '売掛' : '入金済';
+    const st  = csvStatusLabel(t);
     const dr  = t.debit?.account  || '';
     const cr  = t.credit?.account || '';
     return `${t.date},${t.type==='income'?'収入':'経費'},"${t.desc}","${t.categoryName}",${t.amount},${pm==='card'?'クレカ':'現金・振込'},${wt},${st},"${dr}","${cr}","${t.memo||''}"`;
@@ -2241,11 +2376,11 @@ async function loadTaxSummary() {
     btnEl.style.background  = 'var(--ink3)';
     btnEl.style.cursor      = 'default';
   } else {
-    statusEl.textContent    = '締めると翌年の期首元入金が自動で設定されます。締め後も確認ダイアログ経由で編集できます。';
-    btnEl.textContent       = 'この年度を締める';
-    btnEl.disabled          = false;
-    btnEl.style.background  = '#dc2626';
-    btnEl.style.cursor      = 'pointer';
+    statusEl.textContent    = '簡易残高は表示のみです。自動締め・翌年繰越は現在停止しています。';
+    btnEl.textContent       = '自動締めは現在停止中';
+    btnEl.disabled          = true;
+    btnEl.style.background  = 'var(--ink3)';
+    btnEl.style.cursor      = 'not-allowed';
   }
 
   // 家事按分
@@ -2276,6 +2411,8 @@ async function loadTaxSummary() {
   renderDeprecSummary(year);
   renderPL(year);
   renderBS(year);
+  renderAccountingReview(year);
+  updateCloseYearAvailability(year);
 }
 
 // 家事按分の対象科目：自宅兼用が想定される科目のみ（外注費・旅費・広告費等は全額事業費のため除外）
@@ -2298,6 +2435,23 @@ function renderProrationInputs() {
     </div>`).join('');
 }
 
+function updateCloseYearAvailability(year) {
+  const statusEl = document.getElementById('close-year-status');
+  const btnEl = document.getElementById('close-year-btn');
+  if (!statusEl || !btnEl || capitalData[year]?.isClosed) return;
+
+  const review = getAccountingReview(year);
+  if (review.count > 0) {
+    statusEl.textContent = `⚠️ 要確認の取引が${review.count}件あります。自動締め・翌年繰越は現在停止中です。`;
+  } else {
+    statusEl.textContent = '簡易残高は表示のみです。事業主貸・事業主借などを含む繰越仕様を確認するまで、自動締め・翌年繰越は停止しています。';
+  }
+  btnEl.textContent = '自動締めは現在停止中';
+  btnEl.disabled = true;
+  btnEl.style.background = 'var(--ink3)';
+  btnEl.style.cursor = 'not-allowed';
+}
+
 // 締め済み年度への操作をソフトロック（true=続行可、false=キャンセル）
 async function softLockCheck(fiscalYear) {
   if (!fiscalYear) return true;
@@ -2311,33 +2465,8 @@ async function softLockCheck(fiscalYear) {
   return confirm(`${fiscalYear}年度は締め済みです。編集しますか？`);
 }
 
-window.closeFiscalYear = async () => {
-  const year           = parseInt(document.getElementById('tax-year').value);
-  const { profit }     = calcPL(year);
-  const openingCapital = capitalData[year]?.openingCapital || 0;
-  const closingCapital = openingCapital + profit;
-
-  if (!confirm(`${year}年度を締めます。\n\n期末元入金：¥${closingCapital.toLocaleString()}\n翌年（${year + 1}年）の期首元入金に繰越されます。\n\n締め後も確認ダイアログ経由で編集できます。続けますか？`)) return;
-
-  const now = new Date().toISOString();
-  try {
-    await setDoc(doc(db, 'users', currentUser.uid, 'capital', String(year)), {
-      year, openingCapital, closingCapital, isClosed: true, closedAt: now, updatedAt: now
-    });
-    capitalData[year] = { ...capitalData[year], openingCapital, closingCapital, isClosed: true, closedAt: now };
-
-    // 翌年への繰越（既存データがあれば openingCapital のみ上書き）
-    const nextYear  = year + 1;
-    const nextSnap  = await getDoc(doc(db, 'users', currentUser.uid, 'capital', String(nextYear)));
-    const nextExist = nextSnap.exists() ? nextSnap.data() : {};
-    await setDoc(doc(db, 'users', currentUser.uid, 'capital', String(nextYear)), {
-      ...nextExist, year: nextYear, openingCapital: closingCapital, updatedAt: now
-    });
-    capitalData[nextYear] = { ...(capitalData[nextYear] || {}), openingCapital: closingCapital };
-
-    loadTaxSummary();
-    showToast(`✅ ${year}年度を締めました`);
-  } catch(e) { showToast('締めに失敗しました'); console.error(e); }
+window.closeFiscalYear = () => {
+  showToast('自動締め・翌年繰越は現在停止中です');
 };
 
 window.saveCapital = async () => {
@@ -2413,11 +2542,11 @@ function calcPL(year) {
     (t.fiscalYear || parseInt(t.date?.slice(0,4))) === year
   );
   const revenue = fyTx
-    .filter(t => t.type === 'income' && t.status !== 'pending')
+    .filter(isRecognizedIncome)
     .reduce((s, t) => s + t.amount, 0);
 
   const expenseMap = {};
-  fyTx.filter(t => t.type === 'expense').forEach(t => {
+  fyTx.filter(isRecognizedExpense).forEach(t => {
     const catId   = t.categoryId  || 'other';
     const catName = t.categoryName || '雑費';
     const rate    = prorationSettings[catId] ?? 100;
@@ -2429,10 +2558,9 @@ function calcPL(year) {
   const totalExpense  = Object.values(expenseMap).reduce((s, e) => s + e.amount, 0);
   const inv           = inventoryDataMap[year] || {};
   const cogs          = Math.max(0, (inv.openingStock || 0) + (inv.purchases || 0) - (inv.closingStock || 0));
-  const blueDeduction = 650000;
   const grossProfit   = revenue - cogs;
-  const profit        = grossProfit - totalExpense - blueDeduction;
-  return { revenue, cogs, grossProfit, expenseMap, totalExpense, blueDeduction, profit };
+  const accountingProfit = grossProfit - totalExpense;
+  return { revenue, cogs, grossProfit, expenseMap, totalExpense, accountingProfit };
 }
 
 function plRow(label, amount, opts = {}) {
@@ -2449,32 +2577,29 @@ function plRow(label, amount, opts = {}) {
 function renderPL(year) {
   const el = document.getElementById('pl-table');
   if (!el) return;
-  const { revenue, cogs, grossProfit, expenseMap, totalExpense, blueDeduction, profit } = calcPL(year);
-  let html = plRow('売上高', revenue, { bold: true });
+  const { revenue, cogs, grossProfit, expenseMap, totalExpense, accountingProfit } = calcPL(year);
+  let html = plRow('売上高（売掛を含む）', revenue, { bold: true });
   if (cogs > 0) html += plRow('売上原価', cogs, { indent: true, red: true });
   html += plRow('売上総利益', grossProfit, { bold: true, border: true });
   Object.values(expenseMap).forEach(e => {
     html += plRow(e.name, e.amount, { indent: true, red: true });
   });
   if (Object.keys(expenseMap).length) html += plRow('経費合計', totalExpense, { bold: true, border: true });
-  html += plRow('青色申告特別控除', blueDeduction, { indent: true });
-  html += plRow('当期利益', profit, { bold: true, border: true, blue: profit >= 0, red: profit < 0 });
+  html += plRow('会計上の利益（控除前・参考）', accountingProfit, { bold: true, border: true, blue: accountingProfit >= 0, red: accountingProfit < 0 });
+  html += `<div style="font-size:11px;color:var(--ink3);line-height:1.6;margin-top:8px">※ 青色申告特別控除は自動適用していません。適用可否と金額は申告時に確認してください。</div>`;
   el.innerHTML = html;
 }
 
 function renderBS(year) {
   const el = document.getElementById('bs-table');
   if (!el) return;
-  const { profit } = calcPL(year);
+  const { accountingProfit } = calcPL(year);
   const inv = inventoryDataMap[year] || {};
-  const ar  = allTransactions
-    .filter(t => t.type === 'income' && t.status === 'pending' &&
-      (t.fiscalYear || parseInt(t.date?.slice(0,4))) === year)
-    .reduce((s, t) => s + t.amount, 0);
+  const ar  = getReceivablesAtYearEnd(year).amount;
   const closingStock   = inv.closingStock || 0;
   const openingCapital = capitalData[year]?.openingCapital || 0;
   const totalAssets    = ar + closingStock;
-  const totalEquity    = openingCapital + profit;
+  const totalEquity    = openingCapital + accountingProfit;
 
   let html = `<div style="font-size:11px;font-weight:700;color:var(--ink2);margin-bottom:6px;letter-spacing:0.05em">【資産】</div>`;
   html += plRow('売掛金',   ar,           { indent: true });
@@ -2482,9 +2607,26 @@ function renderBS(year) {
   html += plRow('資産合計', totalAssets,   { bold: true, border: true });
   html += `<div style="font-size:11px;font-weight:700;color:var(--ink2);margin:12px 0 6px;letter-spacing:0.05em">【純資産】</div>`;
   html += plRow('元入金',   openingCapital, { indent: true });
-  html += plRow('当期利益', profit,         { indent: true, blue: profit >= 0, red: profit < 0 });
-  html += plRow('純資産合計', totalEquity,  { bold: true, border: true });
+  html += plRow('会計上の利益（参考）', accountingProfit, { indent: true, blue: accountingProfit >= 0, red: accountingProfit < 0 });
+  html += plRow('参考純資産', totalEquity,  { bold: true, border: true });
   el.innerHTML = html;
+}
+
+function renderAccountingReview(year) {
+  const el = document.getElementById('accounting-review');
+  if (!el) return;
+  const review = getAccountingReview(year);
+  if (!review.count) {
+    el.style.display = 'none';
+    el.textContent = '';
+    return;
+  }
+
+  const amountParts = [];
+  if (review.incomeAmount) amountParts.push(`収入 ${fmt(review.incomeAmount)}`);
+  if (review.expenseAmount) amountParts.push(`経費 ${fmt(review.expenseAmount)}`);
+  el.textContent = `⚠️ 要確認 ${review.count}件${amountParts.length ? `（${amountParts.join('・')}）` : ''}：${review.reasons.join('／')}。この取引は参考集計で確定扱いにせず、年度締めを停止します。`;
+  el.style.display = 'block';
 }
 
 // ====== Toast通知 ======
@@ -2632,16 +2774,14 @@ window.printSummary = () => {
   const year = parseInt(document.getElementById('tax-year').value);
   if (!year) return;
 
-  const { revenue, cogs, grossProfit, expenseMap, totalExpense, blueDeduction, profit } = calcPL(year);
+  const { revenue, cogs, grossProfit, expenseMap, totalExpense, accountingProfit } = calcPL(year);
+  const review = getAccountingReview(year);
   const inv = inventoryDataMap[year] || {};
-  const ar = allTransactions
-    .filter(t => t.type === 'income' && t.status === 'pending' &&
-      (t.fiscalYear || parseInt(t.date?.slice(0,4))) === year)
-    .reduce((s, t) => s + t.amount, 0);
+  const ar = getReceivablesAtYearEnd(year).amount;
   const closingStock   = inv.closingStock || 0;
   const openingCapital = capitalData[year]?.openingCapital || 0;
   const totalAssets    = ar + closingStock;
-  const totalEquity    = openingCapital + profit;
+  const totalEquity    = openingCapital + accountingProfit;
 
   const fmt = n => (n < 0 ? '▲' : '') + '¥' + Math.abs(n).toLocaleString();
   const prow = (label, amount, opts = {}) => {
@@ -2653,13 +2793,13 @@ window.printSummary = () => {
       <span>${label}</span><span style="font-family:monospace;color:${color}">${fmt(amount)}</span></div>`;
   };
 
-  let plHtml = prow('売上高', revenue, { bold: true });
+  let plHtml = prow('売上高（売掛を含む）', revenue, { bold: true });
   if (cogs > 0) plHtml += prow('売上原価', cogs, { indent: true, red: true });
   plHtml += prow('売上総利益', grossProfit, { bold: true, border: true });
   Object.values(expenseMap).forEach(e => { plHtml += prow(e.name, e.amount, { indent: true, red: true }); });
   if (Object.keys(expenseMap).length) plHtml += prow('経費合計', totalExpense, { bold: true, border: true });
-  plHtml += prow('青色申告特別控除', blueDeduction, { indent: true });
-  plHtml += prow('当期利益', profit, { bold: true, border: true, blue: profit >= 0, red: profit < 0 });
+  plHtml += prow('会計上の利益（控除前・参考）', accountingProfit, { bold: true, border: true, blue: accountingProfit >= 0, red: accountingProfit < 0 });
+  plHtml += `<div style="font-size:10px;color:#6b6a64;line-height:1.6;margin-top:6px">※ 青色申告特別控除は自動適用していません。適用可否と金額は申告時に確認してください。</div>`;
 
   let bsHtml = `<div style="font-size:11px;font-weight:700;color:#6b6a64;margin-bottom:6px">【資産】</div>`;
   bsHtml += prow('売掛金', ar, { indent: true });
@@ -2667,8 +2807,19 @@ window.printSummary = () => {
   bsHtml += prow('資産合計', totalAssets, { bold: true, border: true });
   bsHtml += `<div style="font-size:11px;font-weight:700;color:#6b6a64;margin:12px 0 6px">【純資産】</div>`;
   bsHtml += prow('元入金', openingCapital, { indent: true });
-  bsHtml += prow('当期利益', profit, { indent: true, blue: profit >= 0, red: profit < 0 });
-  bsHtml += prow('純資産合計', totalEquity, { bold: true, border: true });
+  bsHtml += prow('会計上の利益（参考）', accountingProfit, { indent: true, blue: accountingProfit >= 0, red: accountingProfit < 0 });
+  bsHtml += prow('参考純資産', totalEquity, { bold: true, border: true });
+
+  const reviewParts = [];
+  if (review.incomeAmount) reviewParts.push(`収入 ${fmt(review.incomeAmount)}`);
+  if (review.expenseAmount) reviewParts.push(`経費 ${fmt(review.expenseAmount)}`);
+  const reviewHtml = review.count
+    ? `<div style="margin-bottom:20px;padding:14px;border:1px solid #fdba74;border-radius:8px;background:#fff7ed;color:#9a3412;font-size:12px;line-height:1.7">
+        <b>要確認 ${review.count}件${reviewParts.length ? `（${reviewParts.join('・')}）` : ''}</b><br>
+        ${review.reasons.join('／')}<br>
+        この取引は参考集計で確定扱いにしていません。確認が終わるまで年度締めの対象外です。
+      </div>`
+    : '';
 
   const proKeys = Object.keys(prorationSettings);
   const proHtml = proKeys.length
@@ -2689,11 +2840,13 @@ window.printSummary = () => {
         <div style="font-size:11px;color:#6b6a64;margin-top:4px">出力日: ${today}</div>
       </div>
       <div style="margin-bottom:20px;padding:14px;border:1px solid #ddd;border-radius:8px;">
-        <div style="font-size:13px;font-weight:700;margin-bottom:10px;">損益計算書（P/L）</div>${plHtml}
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px;">損益の参考集計（P/L）</div>${plHtml}
       </div>
       <div style="margin-bottom:20px;padding:14px;border:1px solid #ddd;border-radius:8px;">
-        <div style="font-size:13px;font-weight:700;margin-bottom:10px;">貸借対照表（B/S）</div>${bsHtml}
+        <div style="font-size:13px;font-weight:700;margin-bottom:4px;">簡易残高（参考）</div>
+        <div style="font-size:10px;color:#6b6a64;margin-bottom:10px;">正式な貸借対照表ではありません。事業主貸・事業主借などは反映していません。</div>${bsHtml}
       </div>
+      ${reviewHtml}
       ${proHtml}
       <div style="margin-top:24px;padding-top:12px;border-top:1px solid #ddd;font-size:10px;color:#aaa;text-align:center;">
         ※ この資料はRakuThroughが生成した参考資料です。税務申告には確定申告書等作成コーナー（国税庁）をご利用ください。
