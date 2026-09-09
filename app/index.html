@@ -1571,6 +1571,13 @@ function csvSettlementDate(tx) {
   return isValidIsoDate(tx?.settledAt) ? tx.settledAt.slice(0, 10) : '未登録';
 }
 
+function csvCell(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  let text = value == null ? '' : String(value);
+  if (/^\s*[=+\-@]/.test(text)) text = "'" + text;
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
 function isRecognizedIncome(tx) {
   const status = txStatus(tx);
   return tx?.type === 'income' && (status === 'pending' || status === 'settled');
@@ -2158,7 +2165,8 @@ window.exportCSV = () => {
     const msg = `📌 売掛（未入金）が ${pendingList.length} 件（合計 ¥${total.toLocaleString()}）あります。\n\n入金済みに更新しましたか？\n\n※ 事業口座に入金した場合は、履歴タブから「入金済み」に変更してください。\n\nそのままCSVを出力しますか？`;
     if (!confirm(msg)) return;
   }
-  const header = '日付,種別,摘要,勘定科目,金額,支払い方法,財布区分,入金状態,入金日,借方,貸方,メモ\n';
+  const header = ['日付', '種別', '摘要', '勘定科目', '金額', '支払い方法', '財布区分', '入金状態', '入金日', '借方', '貸方', 'メモ']
+    .map(csvCell).join(',');
   const rows   = allTransactions.map(t => {
     const pm  = t.paymentMethod || t.payment || 'cash';
     const wt  = t.walletType === 'business' ? '事業' : '個人';
@@ -2166,9 +2174,17 @@ window.exportCSV = () => {
     const sd  = csvSettlementDate(t);
     const dr  = t.debit?.account  || '';
     const cr  = t.credit?.account || '';
-    return `${t.date},${t.type==='income'?'収入':'経費'},"${t.desc}","${t.categoryName}",${t.amount},${pm==='card'?'クレカ':'現金・振込'},${wt},${st},${sd},"${dr}","${cr}","${t.memo||''}"`;
+    return [
+      t.date,
+      t.type === 'income' ? '収入' : '経費',
+      t.desc,
+      t.categoryName,
+      t.amount,
+      pm === 'card' ? 'クレカ' : '現金・振込',
+      wt, st, sd, dr, cr, t.memo,
+    ].map(csvCell).join(',');
   }).join('\n');
-  const blob = new Blob(['\uFEFF' + header + rows], { type: 'text/csv;charset=utf-8' });
+  const blob = new Blob(['\uFEFF' + header + '\r\n' + rows], { type: 'text/csv;charset=utf-8' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;

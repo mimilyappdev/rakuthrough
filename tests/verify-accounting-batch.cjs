@@ -36,6 +36,7 @@ const functionNames = [
   'csvStatusLabel',
   'hasReceivableHistory',
   'csvSettlementDate',
+  'csvCell',
   'isRecognizedIncome',
   'isPaidIncome',
   'isRecognizedExpense',
@@ -54,6 +55,7 @@ this.__accounting = {
   csvStatusLabel,
   hasReceivableHistory,
   csvSettlementDate,
+  csvCell,
   isRecognizedIncome,
   isPaidIncome,
   isRecognizedExpense,
@@ -116,9 +118,17 @@ assert.equal(api.csvSettlementDate({ type: 'income', status: 'settled', date: '2
 assert.equal(api.csvSettlementDate({ type: 'income', status: 'settled', date: '2026-01-10', settledAt: '2026-01-15' }), '2026-01-15', 'settled receivables must export the settlement date');
 assert.equal(api.csvSettlementDate({ type: 'income', status: 'settled', date: '2026-01-10', settledAt: 'invalid' }), '未登録', 'invalid receivable settlement dates must stay explicit');
 assert.equal(api.csvSettlementDate({ type: 'income', status: 'pending', date: '2026-01-10', settledAt: '2026-01-15' }), '', 'unpaid receivables must not export a settlement date');
+assert.equal(api.csvCell('東京,大阪'), '"東京,大阪"', 'commas must remain inside one quoted cell');
+assert.equal(api.csvCell('彼は"はい"と言った'), '"彼は""はい""と言った"', 'double quotes must be escaped');
+assert.equal(api.csvCell('1行目\n2行目'), '"1行目\n2行目"', 'line breaks must remain inside one quoted cell');
+assert.equal(api.csvCell('=SUM(A1:A2)'), '"\'=SUM(A1:A2)"', 'formula-like text must be neutralized');
+assert.equal(api.csvCell('  @cmd'), '"\'  @cmd"', 'formula-like text after whitespace must be neutralized');
+assert.equal(api.csvCell(null), '""', 'null values must export as blank cells');
+assert.equal(api.csvCell(12000), '12000', 'numeric amounts must remain numeric CSV values');
 assert.match(html, /const st\s*=\s*csvStatusLabel\(t\)/, 'CSV export must use the reviewed status label mapping');
 assert.match(html, /const sd\s*=\s*csvSettlementDate\(t\)/, 'CSV export must use the receivable-only settlement date mapping');
-assert.match(html, /入金状態,入金日,借方/, 'CSV must include a settlement-date column');
+assert.match(html, /\['日付', '種別', '摘要',[\s\S]*?'入金日'/, 'CSV must include a settlement-date column');
+assert.match(html, /\]\.map\(csvCell\)\.join\(','\)/, 'CSV rows must escape every cell through the shared helper');
 assert.doesNotMatch(html, /wasReceivable\s*:/, 'transaction writes must stay within the existing Firestore schema');
 assert.match(html, /売掛の入金日を補う/, 'edit UI must allow explicit correction of older receivable settlements');
 assert.match(html, /type === 'income' \? '日付（売った日）' : '日付（使った日）'/, 'edit form must distinguish the sale date from an expense date');
