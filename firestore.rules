@@ -72,7 +72,9 @@ service cloud.firestore {
         && (!("withholdingTax" in request.resource.data) || request.resource.data.withholdingTax is number)
         && (!("receivedAmount" in request.resource.data) || request.resource.data.receivedAmount is number)
         && (!("fiscalYear"     in request.resource.data) || request.resource.data.fiscalYear is int)
-        && (!("settledAt"      in request.resource.data) || request.resource.data.settledAt is string);
+        && (!("settledAt"      in request.resource.data) || request.resource.data.settledAt is string)
+        && (!("source"         in request.resource.data) || request.resource.data.source is string)
+        && (!("sourceKey"      in request.resource.data) || request.resource.data.sourceKey is string);
     }
 
     function preserveCreatedAt() {
