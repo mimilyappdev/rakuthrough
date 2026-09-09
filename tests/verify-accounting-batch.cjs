@@ -34,6 +34,8 @@ const functionNames = [
   'isValidIsoDate',
   'txStatus',
   'csvStatusLabel',
+  'hasReceivableHistory',
+  'csvSettlementDate',
   'isRecognizedIncome',
   'isPaidIncome',
   'isRecognizedExpense',
@@ -50,6 +52,8 @@ this.__accounting = {
   txFiscalYear,
   txStatus,
   csvStatusLabel,
+  hasReceivableHistory,
+  csvSettlementDate,
   isRecognizedIncome,
   isPaidIncome,
   isRecognizedExpense,
@@ -108,7 +112,17 @@ assert.equal(api.csvStatusLabel({ status: 'canceled' }), '取消');
 assert.equal(api.csvStatusLabel({ status: 'refunded' }), '返金');
 assert.equal(api.csvStatusLabel({ status: 'mystery' }), '要確認');
 assert.equal(api.csvStatusLabel({}), '要確認');
+assert.equal(api.csvSettlementDate({ type: 'income', status: 'settled', date: '2026-01-10' }), '', 'ordinary paid sales must not get a settlement date');
+assert.equal(api.csvSettlementDate({ type: 'income', status: 'settled', date: '2026-01-10', settledAt: '2026-01-15' }), '2026-01-15', 'settled receivables must export the settlement date');
+assert.equal(api.csvSettlementDate({ type: 'income', status: 'settled', date: '2026-01-10', settledAt: 'invalid' }), '未登録', 'invalid receivable settlement dates must stay explicit');
+assert.equal(api.csvSettlementDate({ type: 'income', status: 'pending', date: '2026-01-10', settledAt: '2026-01-15' }), '', 'unpaid receivables must not export a settlement date');
 assert.match(html, /const st\s*=\s*csvStatusLabel\(t\)/, 'CSV export must use the reviewed status label mapping');
+assert.match(html, /const sd\s*=\s*csvSettlementDate\(t\)/, 'CSV export must use the receivable-only settlement date mapping');
+assert.match(html, /入金状態,入金日,借方/, 'CSV must include a settlement-date column');
+assert.doesNotMatch(html, /wasReceivable\s*:/, 'transaction writes must stay within the existing Firestore schema');
+assert.match(html, /売掛の入金日を補う/, 'edit UI must allow explicit correction of older receivable settlements');
+assert.match(html, /type === 'income' \? '日付（売った日）' : '日付（使った日）'/, 'edit form must distinguish the sale date from an expense date');
+assert.doesNotMatch(html, /await\s+migrateTransactions\(\)/, 'login must not automatically rewrite legacy transaction data');
 
 setFixture([
   { id: 'paid', type: 'income', amount: 100000, status: 'settled', date: '2026-01-10', fiscalYear: 2026 },
@@ -165,7 +179,7 @@ assert.ok(api.getAccountingReview(2026, '2027-02-01').reasons.some(reason => rea
 setFixture([
   { id: 'old', type: 'income', amount: 20000, status: 'settled', date: '2025-06-01', fiscalYear: 2025 },
 ]);
-assert.ok(api.getAccountingReview(2025, '2026-09-07').reasons.some(reason => reason.includes('過去年末')), 'legacy settlement without settledAt must be marked for review');
+assert.equal(api.getAccountingReview(2025, '2026-09-07').count, 0, 'ordinary paid sales without settledAt must not be mistaken for receivables');
 
 setFixture([
   { id: 'expense', type: 'expense', amount: 10000, status: 'settled', date: '2026-05-01', fiscalYear: 2026, categoryId: 'comm', categoryName: '通信費' },

@@ -944,7 +944,7 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
         </div>
         <!-- 日付 -->
         <div class="form-group">
-          <label class="form-label">日付（使った日）</label>
+          <label class="form-label" id="edit-date-label">日付（売った日）</label>
           <input class="form-input" type="date" id="edit-date" style="width:100%;font-size:13px">
         </div>
         <!-- 入金ステータス（収入のみ）-->
@@ -953,6 +953,12 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
           <div class="status-toggle">
             <button class="status-btn" id="edit-btn-settled" onclick="setEditStatus('settled')">✅ 入金済み</button>
             <button class="status-btn" id="edit-btn-pending" onclick="setEditStatus('pending')">⏳ 売掛（未入金）</button>
+          </div>
+          <button type="button" class="status-btn" id="edit-settlement-reveal" onclick="enableEditReceivableSettlement()" style="display:none;width:100%;margin-top:10px">売掛の入金日を補う</button>
+          <div id="edit-settled-at-wrap" style="display:none;margin-top:12px">
+            <label class="form-label">売掛の入金日</label>
+            <input class="form-input" type="date" id="edit-settled-at" style="width:100%;font-size:13px">
+            <div style="font-size:11px;color:var(--ink2);margin-top:5px">売掛から入金済みにした取引だけ入力します。</div>
           </div>
         </div>
         <!-- 支払い方法 -->
@@ -1105,8 +1111,6 @@ onAuthStateChanged(auth, async (user) => {
     // 表示→読み込みの順だと途中タップで入力ページが空になるバグを防ぐ
     try { await loadCategories(); } catch(e) { console.error('loadCategories:', e); }
     try { await loadTransactions(); } catch(e) { console.error('loadTransactions:', e); }
-    // スキーマ移行は独立してtry-catch（失敗してもアプリは動く）
-    try { await migrateTransactions(); } catch(e) { console.error('migrateTransactions:', e); }
     // ここで初めて表示 → initEntryForm が必ず実行される
     document.getElementById('auth-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
@@ -1558,6 +1562,15 @@ function csvStatusLabel(tx) {
   return labels[txStatus(tx)];
 }
 
+function hasReceivableHistory(tx) {
+  return Boolean(tx?.settledAt);
+}
+
+function csvSettlementDate(tx) {
+  if (tx?.type !== 'income' || txStatus(tx) !== 'settled' || !hasReceivableHistory(tx)) return '';
+  return isValidIsoDate(tx?.settledAt) ? tx.settledAt.slice(0, 10) : '未登録';
+}
+
 function isRecognizedIncome(tx) {
   const status = txStatus(tx);
   return tx?.type === 'income' && (status === 'pending' || status === 'settled');
@@ -1615,6 +1628,7 @@ function getReceivablesAtYearEnd(year, today = new Date().toISOString().slice(0,
       return;
     }
     if (status !== 'settled') return;
+    if (!hasReceivableHistory(tx)) return;
 
     if (tx.settledAt) {
       if (typeof tx.settledAt !== 'string') {
@@ -1632,7 +1646,7 @@ function getReceivablesAtYearEnd(year, today = new Date().toISOString().slice(0,
       return;
     }
 
-    // 過去年末は、旧データに入金日がないと当時の売掛残高を再現できない。
+    // 売掛由来と明示された取引だけ、入金日がなければ確認対象にする。
     if (cutoff < today) reviewItems.push({ tx, reason: '過去年末の入金日を確認できない収入' });
   });
 
@@ -1764,6 +1778,10 @@ window.confirmSettle = async () => {
   if (!await softLockCheck(fySettle)) return;
   const settledAt = document.getElementById('settle-date').value;
   if (!settledAt) { showToast('入金日を入力してください'); return; }
+  if (isValidIsoDate(txSettle?.date) && settledAt < txSettle.date.slice(0, 10)) {
+    showToast('入金日は売った日以降にしてください');
+    return;
+  }
   try {
     const settleDebit = { account: '事業主貸', amount: txSettle?.amount };
     await updateDoc(doc(db, 'users', currentUser.uid, 'transactions', currentSettleId), {
@@ -1901,6 +1919,7 @@ let editWalletType       = 'personal';
 let editEntryStatus      = 'settled';
 let editPayment          = 'cash';
 let editSelectedCategory = null;
+let editWasReceivable    = false;
 
 window.openEditModal = (id) => {
   const tx = allTransactions.find(t => t.id === id);
@@ -1917,6 +1936,8 @@ window.openEditModal = (id) => {
   editWalletType  = tx.walletType  || 'personal';
   editEntryStatus = tx.status      || 'settled';
   editPayment     = tx.paymentMethod || tx.payment || 'cash';
+  editWasReceivable = tx.status === 'pending' || hasReceivableHistory(tx);
+  document.getElementById('edit-settled-at').value = isValidIsoDate(tx.settledAt) ? tx.settledAt.slice(0, 10) : '';
 
   setEditWallet (editWalletType);
   setEditStatus (editEntryType === 'income' ? editEntryStatus : 'settled');
@@ -1936,9 +1957,11 @@ window.setEditType = (type) => {
   editEntryType = type;
   document.getElementById('edit-btn-income').className  = 'type-btn' + (type === 'income'  ? ' active-income'  : '');
   document.getElementById('edit-btn-expense').className = 'type-btn' + (type === 'expense' ? ' active-expense' : '');
+  document.getElementById('edit-date-label').textContent = type === 'income' ? '日付（売った日）' : '日付（使った日）';
   // 入金ステータスは収入のみ表示
   const sw = document.getElementById('edit-status-wrap');
   if (sw) sw.style.display = type === 'income' ? '' : 'none';
+  updateEditSettlementUI();
   editSelectedCategory = null;
   renderEditCategoryGrid();
 };
@@ -1947,8 +1970,25 @@ window.setEditWallet = () => {};
 
 window.setEditStatus = (status) => {
   editEntryStatus = status;
+  if (status === 'pending') editWasReceivable = true;
   document.getElementById('edit-btn-settled').className = 'status-btn' + (status === 'settled' ? ' active-settled' : '');
   document.getElementById('edit-btn-pending').className = 'status-btn' + (status === 'pending' ? ' active-pending' : '');
+  updateEditSettlementUI();
+};
+
+function updateEditSettlementUI() {
+  const wrap = document.getElementById('edit-settled-at-wrap');
+  const reveal = document.getElementById('edit-settlement-reveal');
+  if (!wrap || !reveal) return;
+  const isSettledIncome = editEntryType === 'income' && editEntryStatus === 'settled';
+  wrap.style.display = isSettledIncome && editWasReceivable ? '' : 'none';
+  reveal.style.display = isSettledIncome && !editWasReceivable ? '' : 'none';
+}
+
+window.enableEditReceivableSettlement = () => {
+  editWasReceivable = true;
+  updateEditSettlementUI();
+  document.getElementById('edit-settled-at')?.focus();
 };
 
 window.setEditPayment = (method) => {
@@ -1987,6 +2027,11 @@ window.saveEdit = async () => {
   // 摘要が空ならカテゴリ名をfallback（爆速入力対応）
   const desc   = document.getElementById('edit-desc').value.trim() || cat?.name || '';
   const status = editEntryType === 'income' ? editEntryStatus : 'settled';
+  const settledAt = document.getElementById('edit-settled-at').value;
+  if (editEntryType === 'income' && status === 'settled' && editWasReceivable) {
+    if (!settledAt) { showToast('売掛の入金日を入力してください'); return; }
+    if (settledAt < date) { showToast('入金日は売った日以降にしてください'); return; }
+  }
 
   // 仕訳の再計算
   const debit  = autoDebit (editEntryType, editWalletType, status, cat?.name || '');
@@ -2005,6 +2050,7 @@ window.saveEdit = async () => {
     fiscalYear:   parseInt(date.slice(0, 4)),
     updatedAt:    new Date().toISOString(),
   };
+  if (editEntryType === 'income' && status === 'settled' && editWasReceivable) updates.settledAt = settledAt;
 
   try {
     await updateDoc(doc(db, 'users', currentUser.uid, 'transactions', id), updates);
@@ -2101,7 +2147,7 @@ async function loadInventory() {
   } catch(e) { console.error(e); }
 }
 
-// ====== CSVエクスポート（Ver.7.0: walletType / status 列を追加）======
+// ====== CSVエクスポート（walletType / status / 売掛入金日）======
 window.exportCSV = () => {
   if (!canExport()) { showUpgradeModal('収支出力は有料プランでご利用いただけます。', 'export'); return; }
   if (!allTransactions.length) { showToast('取引データがありません'); return; }
@@ -2112,14 +2158,15 @@ window.exportCSV = () => {
     const msg = `📌 売掛（未入金）が ${pendingList.length} 件（合計 ¥${total.toLocaleString()}）あります。\n\n入金済みに更新しましたか？\n\n※ 事業口座に入金した場合は、履歴タブから「入金済み」に変更してください。\n\nそのままCSVを出力しますか？`;
     if (!confirm(msg)) return;
   }
-  const header = '日付,種別,摘要,勘定科目,金額,支払い方法,財布区分,入金状態,借方,貸方,メモ\n';
+  const header = '日付,種別,摘要,勘定科目,金額,支払い方法,財布区分,入金状態,入金日,借方,貸方,メモ\n';
   const rows   = allTransactions.map(t => {
     const pm  = t.paymentMethod || t.payment || 'cash';
     const wt  = t.walletType === 'business' ? '事業' : '個人';
     const st  = csvStatusLabel(t);
+    const sd  = csvSettlementDate(t);
     const dr  = t.debit?.account  || '';
     const cr  = t.credit?.account || '';
-    return `${t.date},${t.type==='income'?'収入':'経費'},"${t.desc}","${t.categoryName}",${t.amount},${pm==='card'?'クレカ':'現金・振込'},${wt},${st},"${dr}","${cr}","${t.memo||''}"`;
+    return `${t.date},${t.type==='income'?'収入':'経費'},"${t.desc}","${t.categoryName}",${t.amount},${pm==='card'?'クレカ':'現金・振込'},${wt},${st},${sd},"${dr}","${cr}","${t.memo||''}"`;
   }).join('\n');
   const blob = new Blob(['\uFEFF' + header + rows], { type: 'text/csv;charset=utf-8' });
   const url  = URL.createObjectURL(blob);
