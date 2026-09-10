@@ -132,6 +132,44 @@
     </div>
   </div>
 
+  <!-- 2026-09-09 -->
+  <div class="entry">
+    <div class="date">2026年9月9日</div>
+    <div class="entry-title">Rakutto Firestoreルール自動検証・本番デプロイ完了</div>
+
+    <div class="topic">
+      <div class="topic-label">やったこと</div>
+      <div class="topic-body">
+        <ul>
+          <li><code>eventSummary</code> と <code>consignmentMonthly</code> の本人限定read/writeルールをcommit・push。</li>
+          <li>公式Firebase Rules APIで構文・意味検証を行い、エラー0件を確認。</li>
+          <li>本人のread/list/create/update/delete許可、未認証者・他ユーザー拒否を含む自動テスト18件が成功。</li>
+          <li><code>firebase deploy --only firestore:rules --project blue-tax-app</code> でFirestore Rulesだけを本番デプロイ。</li>
+          <li>公開Ruleset <code>4b3715fe-97a0-4ac6-889a-43bf63a857ad</code> を読み戻し、ローカルと完全一致することを確認。</li>
+          <li>公開中・ローカル共通のSHA-256：<code>b40030e8082044ccb07b7aaa9e3d3a2dab98f40930493ea84bfc5e15557a0a52</code></li>
+        </ul>
+        <div class="decided">
+          イベント削除は売上記録とレポートを削除するが、在庫数は元に戻さない。Rakuttoの確認文を明確化し、commit <code>983d337</code> がVercel本番へ正常デプロイされた。
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">未確認・別課題</div>
+      <div class="topic-body">
+        <ul>
+          <li>本番データを使ったイベント保存・委託月次保存・イベント削除は未実施。</li>
+          <li>イベント削除は販売記録が元に戻らないため、動作確認目的では実行しない。</li>
+          <li>未認証子機の商品画像と、子機QR再取込時の在庫二重減算は別課題。</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="note-hint">💡 Firestoreルール修正は完了。次の優先候補：子機QR再取込の冪等性対策。</p>
+  </div>
+
   <!-- 2026-09-08 -->
   <div class="entry">
     <div class="date">2026年9月8日</div>
