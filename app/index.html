@@ -1426,6 +1426,20 @@ function initEntryForm() {
   renderCategoryGrid();
 }
 
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  })[char]);
+}
+
+function inlineJsArg(value) {
+  return escapeHtml(JSON.stringify(String(value ?? '')));
+}
+
+function safeHexColor(value, fallback = '#6b7280') {
+  return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value : fallback;
+}
+
 // 科目グリッド描画（Ver.8.0: Material Icons・色は--accentに統一）
 function renderCategoryGrid() {
   const grid = document.getElementById('category-grid');
@@ -1433,15 +1447,15 @@ function renderCategoryGrid() {
   const src = (categories && categories.length > 0) ? categories : DEFAULT_CATEGORIES;
   const filtered = src.filter(c => c.type === currentEntryType);
   grid.innerHTML = filtered.map(cat => {
-    const icon = cat.icon || cat.emoji || 'label';
+    const icon = String(cat.icon || cat.emoji || 'label');
     const isEmoji = icon.length > 2; // 絵文字かMaterial Iconかの判定
     const iconHtml = isEmoji
-      ? `<span style="font-size:13px;">${icon}</span>`
-      : `<span class="material-icons" style="font-size:14px;vertical-align:-2px;">${icon}</span>`;
+      ? `<span style="font-size:13px;">${escapeHtml(icon)}</span>`
+      : `<span class="material-icons" style="font-size:14px;vertical-align:-2px;">${escapeHtml(icon)}</span>`;
     const sel = selectedCategory === cat.id;
     return `<button class="cat-btn${sel ? ' selected' : ''}"
        style="${sel ? 'background:var(--accent);color:#fff;border-color:var(--accent);' : ''}"
-       onclick="selectCategory('${cat.id}')">${iconHtml} ${cat.name}</button>`;
+       onclick="selectCategory(${inlineJsArg(cat.id)})">${iconHtml} ${escapeHtml(cat.name)}</button>`;
   }).join('');
 }
 
@@ -1752,17 +1766,17 @@ function renderPending() {
   section.style.display = 'block';
   list.innerHTML = pending.map(tx => {
     const cat   = categories.find(c => c.id === tx.categoryId);
-    const emoji = cat?.emoji || '💰';
-    const desc  = tx.desc ? ` · ${tx.desc}` : '';
+    const emoji = escapeHtml(cat?.emoji || '💰');
+    const desc  = tx.desc ? ` · ${escapeHtml(tx.desc)}` : '';
     return `
       <div class="tx-card is-pending">
         <div class="tx-icon income">${emoji}</div>
         <div class="tx-body">
-          <div class="tx-desc">${tx.categoryName || '収入'}</div>
-          <div class="tx-meta">請求日: ${tx.date}${desc}</div>
+          <div class="tx-desc">${escapeHtml(tx.categoryName || '収入')}</div>
+          <div class="tx-meta">請求日: ${escapeHtml(tx.date)}${desc}</div>
         </div>
         <div class="tx-amount income is-pending">${fmt(tx.amount)}</div>
-        <button class="settle-btn" onclick="settleTransaction('${tx.id}')">入金済み</button>
+        <button class="settle-btn" onclick="settleTransaction(${inlineJsArg(tx.id)})">入金済み</button>
       </div>`;
   }).join('');
 }
@@ -1813,8 +1827,9 @@ window.confirmSettle = async () => {
 // 科目カラードット・売掛バッジ・事業バッジを履歴のみに表示
 function txCard(tx) {
   const cat      = categories.find(c => c.id === tx.categoryId);
-  const emoji    = cat?.emoji || (tx.type === 'income' ? '💰' : '📋');
-  const catColor = cat?.color || (tx.type === 'income' ? '#3730a3' : '#6b7280');
+  const emoji    = escapeHtml(cat?.emoji || (tx.type === 'income' ? '💰' : '📋'));
+  const catColor = safeHexColor(cat?.color, tx.type === 'income' ? '#3730a3' : '#6b7280');
+  const typeClass = tx.type === 'income' ? 'income' : 'expense';
 
   // バッジ生成（後方互換：paymentMethodがない場合はpaymentを見る）
   const isCard    = tx.paymentMethod === 'card' || tx.payment === 'card';
@@ -1826,17 +1841,17 @@ function txCard(tx) {
   // 科目カラードット（履歴のみ表示・入力フォームには出さない）
   const colorDot = `<span class="cat-dot" style="background:${catColor}"></span>`;
 
-  return `<div class="tx-card${tx.status === 'pending' ? ' is-pending' : ''}" id="tx-${tx.id}">
-    <div class="tx-icon ${tx.type}">${emoji}</div>
+  return `<div class="tx-card${tx.status === 'pending' ? ' is-pending' : ''}" id="tx-${escapeHtml(tx.id)}">
+    <div class="tx-icon ${typeClass}">${emoji}</div>
     <div class="tx-body">
-      <div class="tx-desc">${tx.desc || ''}${cardBadge}${witBadge}${pendBadge}${bizBadge}</div>
-      <div class="tx-meta">${colorDot}${tx.date} · ${tx.categoryName || ''}</div>
+      <div class="tx-desc">${escapeHtml(tx.desc)}${cardBadge}${witBadge}${pendBadge}${bizBadge}</div>
+      <div class="tx-meta">${colorDot}${escapeHtml(tx.date)} · ${escapeHtml(tx.categoryName)}</div>
     </div>
-    <div class="tx-amount ${tx.type}${tx.status === 'pending' ? ' is-pending' : ''}">
+    <div class="tx-amount ${typeClass}${tx.status === 'pending' ? ' is-pending' : ''}">
       ${tx.type==='income'?'+':'-'}${fmt(tx.amount)}
     </div>
-    <button class="tx-edit"   onclick="openEditModal('${tx.id}')" title="編集">✏</button>
-    <button class="tx-delete" onclick="deleteTransaction('${tx.id}')" title="削除">×</button>
+    <button class="tx-edit"   onclick="openEditModal(${inlineJsArg(tx.id)})" title="編集">✏</button>
+    <button class="tx-delete" onclick="deleteTransaction(${inlineJsArg(tx.id)})" title="削除">×</button>
   </div>`;
 }
 
@@ -1905,15 +1920,15 @@ function renderCategoryManage() {
   const list = document.getElementById('cat-manage-list');
   list.innerHTML = categories.map(cat => {
     const isDefault  = DEFAULT_CATEGORIES.find(c => c.id === cat.id);
-    const colorDot   = `<span class="cat-dot" style="background:${cat.color || '#6b7280'};width:10px;height:10px;"></span>`;
+    const colorDot   = `<span class="cat-dot" style="background:${safeHexColor(cat.color)};width:10px;height:10px;"></span>`;
     const deleteArea = isDefault
       ? `<span class="cat-default-label">デフォルト</span>`
-      : `<span class="cat-delete" onclick="deleteCategory('${cat.id}')">×</span>`;
+      : `<span class="cat-delete" onclick="deleteCategory(${inlineJsArg(cat.id)})">×</span>`;
     return `
       <div class="cat-row">
         ${colorDot}
-        <span class="cat-emoji">${cat.emoji}</span>
-        <span class="cat-name">${cat.name}</span>
+        <span class="cat-emoji">${escapeHtml(cat.emoji)}</span>
+        <span class="cat-name">${escapeHtml(cat.name)}</span>
         <span class="cat-type">${cat.type === 'income' ? '収入' : '経費'}</span>
         ${deleteArea}
       </div>`;
@@ -2009,7 +2024,7 @@ function renderEditCategoryGrid() {
   const filtered = categories.filter(c => c.type === editEntryType);
   grid.innerHTML = filtered.map(cat =>
     `<button class="cat-btn${editSelectedCategory === cat.id ? ' selected' : ''}"
-       onclick="selectEditCategory('${cat.id}')">${cat.emoji} ${cat.name}</button>`
+       onclick="selectEditCategory(${inlineJsArg(cat.id)})">${escapeHtml(cat.emoji)} ${escapeHtml(cat.name)}</button>`
   ).join('');
 }
 
@@ -2490,10 +2505,10 @@ function renderProrationInputs() {
   );
   list.innerHTML = expCats.map(c => `
     <div style="display:flex;align-items:center;gap:8px">
-      <span style="flex:1;font-size:13px">${c.emoji} ${c.name}</span>
+      <span style="flex:1;font-size:13px">${escapeHtml(c.emoji)} ${escapeHtml(c.name)}</span>
       <input type="number" min="0" max="100" value="${prorationSettings[c.id] ?? 100}"
         style="width:60px;padding:6px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;text-align:right;font-family:var(--mono);background:var(--surface);color:var(--ink)"
-        onchange="prorationSettings['${c.id}']=Math.min(100,Math.max(0,parseInt(this.value)||0))">
+        onchange="prorationSettings[${inlineJsArg(c.id)}]=Math.min(100,Math.max(0,parseInt(this.value)||0))">
       <span style="font-size:12px;color:var(--ink2);width:16px">%</span>
     </div>`).join('');
 }
@@ -2568,7 +2583,7 @@ function renderDeprecSummary(year) {
   const total = allAssets.reduce((s, a) => s + (a.annualExpense || 0), 0);
   el.innerHTML = allAssets.map(a => `
     <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border)">
-      <span style="color:var(--ink2)">${a.name}</span>
+      <span style="color:var(--ink2)">${escapeHtml(a.name)}</span>
       <span style="font-family:var(--mono);color:var(--red)">¥${(a.annualExpense||0).toLocaleString()}</span>
     </div>`).join('') +
     `<div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;font-weight:700">
@@ -2632,7 +2647,7 @@ function plRow(label, amount, opts = {}) {
   const bold   = opts.bold   ? 'font-weight:700;' : 'color:var(--ink2);';
   const border = opts.border ? 'border-top:1.5px solid var(--border);margin-top:4px;padding-top:8px;' : '';
   return `<div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;${indent}${bold}${border}">
-    <span>${label}</span>
+    <span>${escapeHtml(label)}</span>
     <span style="font-family:var(--mono);color:${color}">${amount < 0 ? '▲' : ''}¥${Math.abs(amount).toLocaleString()}</span>
   </div>`;
 }
@@ -2810,17 +2825,17 @@ function renderAssets() {
   }
   const totalAnnual = allAssets.reduce((s, a) => s + (a.annualExpense || 0), 0);
   list.innerHTML = allAssets.map(a => {
-    const badge    = a.isSpecial ? `<span class="asset-badge special">少額特例</span>` : `<span class="asset-badge normal">定額法 ${a.years}年</span>`;
+    const badge    = a.isSpecial ? `<span class="asset-badge special">少額特例</span>` : `<span class="asset-badge normal">定額法 ${escapeHtml(a.years)}年</span>`;
     const metaText = [`取得日：${a.date}`, `取得価額：¥${(a.price||0).toLocaleString()}`, a.rate < 100 ? `事業割合：${a.rate}%` : null].filter(Boolean).join('　');
     const labelText = a.isSpecial ? '取得年一括経費額' : '年間償却費（定額法）';
     return `
       <div class="asset-card ${a.isSpecial ? 'special' : ''}">
         <div class="asset-card-header">
-          <div class="asset-name">🖥️ ${a.name}</div>
-          <button class="asset-delete-btn" onclick="deleteAsset('${a.id}')">×</button>
+          <div class="asset-name">🖥️ ${escapeHtml(a.name)}</div>
+          <button class="asset-delete-btn" onclick="deleteAsset(${inlineJsArg(a.id)})">×</button>
         </div>
         ${badge}
-        <div class="asset-meta" style="margin-top:6px">${metaText}</div>
+        <div class="asset-meta" style="margin-top:6px">${escapeHtml(metaText)}</div>
         <div class="asset-amount-row">
           <div class="asset-amount-label">${labelText}</div>
           <div class="asset-amount-value">¥${(a.annualExpense||0).toLocaleString()}</div>
@@ -2879,7 +2894,7 @@ window.printSummary = () => {
   const reviewHtml = review.count
     ? `<div style="margin-bottom:20px;padding:14px;border:1px solid #fdba74;border-radius:8px;background:#fff7ed;color:#9a3412;font-size:12px;line-height:1.7">
         <b>要確認 ${review.count}件${reviewParts.length ? `（${reviewParts.join('・')}）` : ''}</b><br>
-        ${review.reasons.join('／')}<br>
+        ${review.reasons.map(escapeHtml).join('／')}<br>
         この取引は参考集計で確定扱いにしていません。確認が終わるまで年度締めの対象外です。
       </div>`
     : '';
@@ -2890,7 +2905,7 @@ window.printSummary = () => {
         <div style="font-size:13px;font-weight:700;margin-bottom:10px;">家事按分設定</div>
         ${Object.values(prorationSettings).map(p =>
           `<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;color:#6b6a64;">
-            <span>${p.name}</span><span style="font-family:monospace">${p.ratio}%</span></div>`
+            <span>${escapeHtml(p.name)}</span><span style="font-family:monospace">${escapeHtml(p.ratio)}%</span></div>`
         ).join('')}
       </div>` : '';
 

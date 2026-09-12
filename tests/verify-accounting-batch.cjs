@@ -30,6 +30,9 @@ function extractFunction(name) {
 const statusConst = html.match(/const ACCOUNTING_STATUSES = new Set\([^\n]+/);
 assert.ok(statusConst, 'accounting statuses should exist');
 const functionNames = [
+  'escapeHtml',
+  'inlineJsArg',
+  'safeHexColor',
   'txFiscalYear',
   'isValidIsoDate',
   'txStatus',
@@ -46,10 +49,14 @@ const functionNames = [
   'calcPL',
   'renderAccountingReview',
   'updateCloseYearAvailability',
+  'txCard',
 ];
 const accountingSource = `function fmt(n) { return '¥' + Math.round(n).toLocaleString(); }\n`
   + [statusConst[0], ...functionNames.map(extractFunction)].join('\n') + `
 this.__accounting = {
+  escapeHtml,
+  inlineJsArg,
+  safeHexColor,
   txFiscalYear,
   txStatus,
   csvStatusLabel,
@@ -65,6 +72,7 @@ this.__accounting = {
   calcPL,
   renderAccountingReview,
   updateCloseYearAvailability,
+  txCard,
 };`;
 
 const elements = {
@@ -108,6 +116,21 @@ function setFixture(transactions, { inventory = {}, proration = {} } = {}) {
 setFixture([]);
 assert.equal(api.calcPL(2026).accountingProfit, 0, 'zero transactions must produce zero profit');
 
+assert.equal(api.escapeHtml(`<script>"'&</script>`), '&lt;script&gt;&quot;&#39;&amp;&lt;/script&gt;', 'HTML special characters must be escaped');
+assert.equal(api.inlineJsArg(`x');alert(1)//`), '&quot;x&#39;);alert(1)//&quot;', 'inline handler arguments must stay inside a quoted JavaScript string');
+assert.equal(api.safeHexColor('#12aBcF'), '#12aBcF', 'valid six-digit colors must be preserved');
+assert.equal(api.safeHexColor('red;position:fixed'), '#6b7280', 'unsafe style values must fall back to a fixed color');
+context.categories = [{ id: 'hostile', emoji: '<img src=x onerror=alert(1)>', color: 'red;position:fixed' }];
+const hostileCard = api.txCard({
+  id: `tx');alert(1)//`, type: 'income', status: 'settled', categoryId: 'hostile',
+  desc: '<script>alert(1)</script>', date: '2026-09-11"><img src=x>', categoryName: '売上&A', amount: 1000,
+});
+assert.doesNotMatch(hostileCard, /<script>|<img src=x/, 'transaction cards must not render stored HTML');
+assert.match(hostileCard, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/, 'transaction descriptions must remain visible as text');
+assert.match(hostileCard, /background:#3730a3/, 'invalid category colors must use the safe fallback');
+assert.match(hostileCard, /openEditModal\(&quot;tx&#39;\);alert\(1\)\/\/&quot;\)/, 'transaction ids must not break inline handlers');
+context.categories = [];
+
 assert.equal(api.csvStatusLabel({ status: 'pending' }), '売掛');
 assert.equal(api.csvStatusLabel({ status: 'settled' }), '入金済');
 assert.equal(api.csvStatusLabel({ status: 'canceled' }), '取消');
@@ -132,6 +155,9 @@ assert.match(html, /\]\.map\(csvCell\)\.join\(','\)/, 'CSV rows must escape ever
 assert.doesNotMatch(html, /wasReceivable\s*:/, 'transaction writes must stay within the existing Firestore schema');
 assert.match(html, /売掛の入金日を補う/, 'edit UI must allow explicit correction of older receivable settlements');
 assert.match(html, /type === 'income' \? '日付（売った日）' : '日付（使った日）'/, 'edit form must distinguish the sale date from an expense date');
+assert.match(html, /escapeHtml\(cat\.name\)/, 'category names must be escaped in rendered HTML');
+assert.match(html, /escapeHtml\(a\.name\)/, 'asset names must be escaped in rendered HTML');
+assert.match(html, /review\.reasons\.map\(escapeHtml\)/, 'print review text must be escaped');
 assert.doesNotMatch(html, /await\s+migrateTransactions\(\)/, 'login must not automatically rewrite legacy transaction data');
 
 setFixture([
