@@ -2321,6 +2321,15 @@ const DEV_PRO_EMAILS = ['miumiu7tanaka@gmail.com'];
 function isPro()      { return userPlan === 'pro' || userPlan === 'lifetime'; }
 function canExport()  { return isPro() || userPlan === 'export'; }
 
+function resolveUserPlan(billingData, legacyData, now = new Date()) {
+  const plan       = billingData?.plan ?? legacyData?.plan ?? 'free';
+  const planExpiry = billingData?.planExpiry ?? legacyData?.planExpiry ?? null;
+  const isExpired  = (plan === 'pro' || plan === 'export')
+    && planExpiry
+    && new Date(planExpiry) < now;
+  return isExpired ? 'free' : plan;
+}
+
 async function loadUserPlan() {
   if (!currentUser) return;
   // 開発者メールは常にpro
@@ -2330,24 +2339,17 @@ async function loadUserPlan() {
     return;
   }
   try {
-    const snap = await getDoc(doc(db, 'users', currentUser.uid));
-    if (snap.exists()) {
-      const data = snap.data();
-      // planExpiryがある場合は期限チェック
-      if ((data.plan === 'pro' || data.plan === 'export') && data.planExpiry && new Date(data.planExpiry) < new Date()) {
-        userPlan = 'free';
-        await setDoc(doc(db, 'users', currentUser.uid), { plan: 'free', planExpiry: null }, { merge: true });
-      } else {
-        userPlan = data.plan || 'free';
-      }
-    } else {
-      // 初回ログイン：ユーザードキュメントを作成
-      await setDoc(doc(db, 'users', currentUser.uid), {
-        plan: 'free', stripeCustomerId: null, planExpiry: null,
-        createdAt: new Date().toISOString()
-      });
-      userPlan = 'free';
+    const legacyPromise = getDoc(doc(db, 'users', currentUser.uid));
+    let billingData = null;
+    try {
+      const billingSnap = await getDoc(doc(db, 'users', currentUser.uid, 'billing', 'rakuthrough'));
+      billingData = billingSnap.exists() ? billingSnap.data() : null;
+    } catch(e) {
+      console.warn('RakuThrough billing document is unavailable; using legacy plan data.', e);
     }
+    const legacySnap = await legacyPromise;
+    const legacyData = legacySnap.exists() ? legacySnap.data() : null;
+    userPlan = resolveUserPlan(billingData, legacyData);
   } catch(e) { console.error('loadUserPlan:', e); }
   applyPlanUI();
 }
@@ -2550,11 +2552,13 @@ window.closeFiscalYear = () => {
 window.saveCapital = async () => {
   const year           = parseInt(document.getElementById('tax-year').value);
   const openingCapital = parseInt(document.getElementById('opening-capital').value) || 0;
+  if (!(await softLockCheck(year))) return;
+  const updatedAt = new Date().toISOString();
   try {
     await setDoc(doc(db, 'users', currentUser.uid, 'capital', String(year)), {
-      year, openingCapital, updatedAt: new Date().toISOString()
-    });
-    capitalData[year] = { openingCapital };
+      year, openingCapital, updatedAt
+    }, { merge: true });
+    capitalData[year] = { ...capitalData[year], year, openingCapital, updatedAt };
     renderBS(year);
     showToast('元入金を保存しました');
   } catch(e) { showToast('保存に失敗しました'); console.error(e); }

@@ -15,7 +15,9 @@ assert.doesNotThrow(() => new AsyncFunction(withoutImports), 'module JavaScript 
 
 // 実装した会計関数をHTMLからそのまま評価する。UIやFirebaseは実行しない。
 function extractFunction(name) {
-  const start = html.indexOf(`function ${name}(`);
+  const asyncStart = html.indexOf(`async function ${name}(`);
+  const syncStart = html.indexOf(`function ${name}(`);
+  const start = asyncStart >= 0 ? asyncStart : syncStart;
   assert.ok(start >= 0, `${name} should exist`);
   const braceStart = html.indexOf('{', start);
   let depth = 0;
@@ -40,6 +42,7 @@ const functionNames = [
   'hasReceivableHistory',
   'csvSettlementDate',
   'csvCell',
+  'resolveUserPlan',
   'isRecognizedIncome',
   'isPaidIncome',
   'isRecognizedExpense',
@@ -63,6 +66,7 @@ this.__accounting = {
   hasReceivableHistory,
   csvSettlementDate,
   csvCell,
+  resolveUserPlan,
   isRecognizedIncome,
   isPaidIncome,
   isRecognizedExpense,
@@ -148,6 +152,21 @@ assert.equal(api.csvCell('=SUM(A1:A2)'), '"\'=SUM(A1:A2)"', 'formula-like text m
 assert.equal(api.csvCell('  @cmd'), '"\'  @cmd"', 'formula-like text after whitespace must be neutralized');
 assert.equal(api.csvCell(null), '""', 'null values must export as blank cells');
 assert.equal(api.csvCell(12000), '12000', 'numeric amounts must remain numeric CSV values');
+const planNow = new Date('2026-09-13T00:00:00Z');
+assert.equal(api.resolveUserPlan({ plan: 'pro' }, { plan: 'free' }, planNow), 'pro', 'app billing must override legacy billing');
+assert.equal(api.resolveUserPlan({ plan: 'free' }, { plan: 'pro' }, planNow), 'free', 'app billing free state must override legacy paid state');
+assert.equal(api.resolveUserPlan(null, { plan: 'export' }, planNow), 'export', 'legacy billing must remain available as a fallback');
+assert.equal(api.resolveUserPlan({ plan: 'pro', planExpiry: '2026-09-12T23:59:59Z' }, null, planNow), 'free', 'expired pro access must resolve to free');
+assert.equal(api.resolveUserPlan({ plan: 'export', planExpiry: '2026-09-12T23:59:59Z' }, null, planNow), 'free', 'expired export access must resolve to free');
+assert.equal(api.resolveUserPlan({ plan: 'lifetime', planExpiry: '2020-01-01T00:00:00Z' }, null, planNow), 'lifetime', 'lifetime access must not expire');
+assert.equal(api.resolveUserPlan(null, null, planNow), 'free', 'missing billing data must resolve to free');
+const loadUserPlanSource = extractFunction('loadUserPlan');
+assert.match(loadUserPlanSource, /'billing', 'rakuthrough'/, 'plan loading must read the RakuThrough billing document');
+assert.doesNotMatch(loadUserPlanSource, /\bsetDoc\s*\(/, 'login-time plan loading must not write billing data');
+const saveCapitalSource = html.match(/window\.saveCapital\s*=\s*async[\s\S]*?(?=window\.saveProration)/)?.[0] || '';
+assert.match(saveCapitalSource, /await softLockCheck\(year\)/, 'capital edits must respect the existing closed-year check');
+assert.match(saveCapitalSource, /\}, \{ merge: true \}\);/, 'capital saves must merge with existing year data');
+assert.match(saveCapitalSource, /capitalData\[year\]\s*=\s*\{\s*\.\.\.capitalData\[year\]/, 'local capital state must preserve existing year fields');
 assert.match(html, /const st\s*=\s*csvStatusLabel\(t\)/, 'CSV export must use the reviewed status label mapping');
 assert.match(html, /const sd\s*=\s*csvSettlementDate\(t\)/, 'CSV export must use the receivable-only settlement date mapping');
 assert.match(html, /\['日付', '種別', '摘要',[\s\S]*?'入金日'/, 'CSV must include a settlement-date column');
