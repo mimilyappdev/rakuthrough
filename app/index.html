@@ -815,11 +815,15 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
 
     <!-- ⑥ データ出力（デフォルト閉じ）-->
     <div class="settings-section">
-      <button class="accordion-header" onclick="toggleAccordion(this)">
+      <button class="accordion-header" onclick="toggleAccordion(this); initCsvYearSelect()">
         <div class="accordion-title-wrap"><span>💾</span><span class="accordion-title">データ出力</span></div>
         <span class="accordion-arrow">▼</span>
       </button>
       <div class="accordion-body">
+        <div style="margin-bottom:10px;display:flex;align-items:center;gap:10px">
+          <label class="form-label" style="margin:0;white-space:nowrap">出力する年</label>
+          <select class="form-input" id="csv-year" style="max-width:130px;margin:0"></select>
+        </div>
         <div class="settings-card">
           <div class="settings-row" onclick="exportCSV()">
             <div class="settings-row-label">CSVエクスポート</div>
@@ -1580,6 +1584,48 @@ function csvSettlementDate(tx) {
   return isValidIsoDate(tx?.settledAt) ? tx.settledAt.slice(0, 10) : '未登録';
 }
 
+// 源泉徴収税額（入金済み・売掛の収入のみ。取消・返金は含めない）
+function txWithholdingTax(tx) {
+  if (!isRecognizedIncome(tx) || !tx.isWithholding) return 0;
+  return Number(tx.withholdingTax) || 0;
+}
+
+function calcWithholdingTotal(year) {
+  return allTransactions
+    .filter(tx => txFiscalYear(tx) === year)
+    .reduce((sum, tx) => sum + txWithholdingTax(tx), 0);
+}
+
+// 受取の仕訳行。事業口座で源泉徴収がある場合は、受取額と源泉税（事業主貸）に分ける
+function receiptLines(tx, credit) {
+  const amount  = Number(tx.amount) || 0;
+  const tax     = txWithholdingTax(tx);
+  const account = tx.walletType === 'business' ? '普通預金' : '事業主貸';
+  if (tax > 0 && account !== '事業主貸') {
+    return [{ debit: account, credit, amount: amount - tax }, { debit: '事業主貸', credit, amount: tax }];
+  }
+  return [{ debit: account, credit, amount }];
+}
+
+// CSV用の仕訳行。売掛由来の収入は「売上」と「入金」を別の行にする
+function journalRows(tx) {
+  const amount = Number(tx.amount) || 0;
+  if (tx?.type === 'income' && txStatus(tx) === 'settled' && hasReceivableHistory(tx)) {
+    const settleDate = isValidIsoDate(tx.settledAt) ? tx.settledAt.slice(0, 10) : '';
+    return [
+      { date: tx.date, kind: '売上', debit: '売掛金', credit: '売上高', amount, isSale: true },
+      ...receiptLines(tx, '売掛金').map(line => ({ date: settleDate, kind: '入金', ...line })),
+    ];
+  }
+  if (tx?.type === 'income' && txStatus(tx) === 'settled') {
+    return receiptLines(tx, '売上高').map((line, i) => ({ date: tx.date, kind: '売上', ...line, isSale: i === 0 }));
+  }
+  return [{
+    date: tx.date, kind: tx?.type === 'income' ? '売上' : '経費',
+    debit: tx.debit?.account || '', credit: tx.credit?.account || '', amount, isSale: tx?.type === 'income',
+  }];
+}
+
 function csvCell(value) {
   if (typeof value === 'number' && Number.isFinite(value)) return String(value);
   let text = value == null ? '' : String(value);
@@ -1799,15 +1845,14 @@ window.confirmSettle = async () => {
     return;
   }
   try {
-    const settleDebit = { account: '事業主貸', amount: txSettle?.amount };
+    // 売上時の仕訳（売掛金/売上高）は上書きしない。入金時の仕訳はCSV出力で settledAt から作る
     await updateDoc(doc(db, 'users', currentUser.uid, 'transactions', currentSettleId), {
       status: 'settled',
       settledAt,
-      debit: settleDebit,
       updatedAt: new Date().toISOString(),
     });
     const tx = allTransactions.find(t => t.id === currentSettleId);
-    if (tx) { tx.status = 'settled'; tx.settledAt = settledAt; tx.debit = settleDebit; tx.updatedAt = new Date().toISOString(); }
+    if (tx) { tx.status = 'settled'; tx.settledAt = settledAt; tx.updatedAt = new Date().toISOString(); }
     cancelSettle();
     updateHome();
     renderHistory();
@@ -2051,7 +2096,10 @@ window.saveEdit = async () => {
   }
 
   // 仕訳の再計算
-  const debit  = autoDebit (editEntryType, editWalletType, status, cat?.name || '');
+  // 売掛由来の入金済み収入は、売上時の仕訳（売掛金/売上高）を保つ
+  const debit  = editEntryType === 'income' && status === 'settled' && editWasReceivable
+    ? { account: '売掛金' }
+    : autoDebit(editEntryType, editWalletType, status, cat?.name || '');
   const credit = autoCredit(editEntryType, editWalletType, cat?.name || '');
   debit.amount  = amount;
   credit.amount = amount;
@@ -2165,40 +2213,66 @@ async function loadInventory() {
 }
 
 // ====== CSVエクスポート（walletType / status / 売掛入金日）======
-window.exportCSV = () => {
+window.initCsvYearSelect = () => {
+  const sel = document.getElementById('csv-year');
+  if (!sel || sel.options.length) return;
+  const y = new Date().getFullYear();
+  sel.innerHTML = [y, y-1, y-2].map(n => `<option value="${n}">${n}年</option>`).join('')
+    + '<option value="all">全期間</option>';
+};
+
+async function loadProrationSettings() {
+  try {
+    const snap = await getDoc(doc(db, 'users', currentUser.uid, 'settings', 'proration'));
+    if (snap.exists()) prorationSettings = snap.data().rates || {};
+  } catch(e) { console.error(e); }
+}
+
+window.exportCSV = async () => {
   if (!canExport()) { showUpgradeModal('収支出力は有料プランでご利用いただけます。', 'export'); return; }
   if (!allTransactions.length) { showToast('取引データがありません'); return; }
+  const yearValue = document.getElementById('csv-year')?.value || 'all';
+  const year = yearValue === 'all' ? null : parseInt(yearValue);
+  await loadProrationSettings();
+  // 行の日付（売上日・入金日）で年を絞る。入金日が未登録の入金行は売上の年に含める
+  const rowYear = (row, tx) => parseInt((row.date || tx.date || '').slice(0, 4));
+  const exportRows = allTransactions.flatMap(tx => journalRows(tx).map(row => ({ tx, row })))
+    .filter(({ tx, row }) => year === null || rowYear(row, tx) === year);
+  if (!exportRows.length) { showToast(`${year}年の取引データがありません`); return; }
   // CSV出力前に未入金（売掛）の取引があれば確認を促す
-  const pendingList = allTransactions.filter(t => t.status === 'pending');
+  const pendingList = allTransactions.filter(t => t.status === 'pending' && (year === null || txFiscalYear(t) === year));
   if (pendingList.length > 0) {
     const total = pendingList.reduce((s, t) => s + t.amount, 0);
     const msg = `📌 売掛（未入金）が ${pendingList.length} 件（合計 ¥${total.toLocaleString()}）あります。\n\n入金済みに更新しましたか？\n\n※ 事業口座に入金した場合は、履歴タブから「入金済み」に変更してください。\n\nそのままCSVを出力しますか？`;
     if (!confirm(msg)) return;
   }
-  const header = ['日付', '種別', '摘要', '勘定科目', '金額', '支払い方法', '財布区分', '入金状態', '入金日', '借方', '貸方', 'メモ']
+  const header = ['日付', '種別', '摘要', '勘定科目', '金額', '支払い方法', '財布区分', '入金状態', '入金日', '借方', '貸方', 'メモ',
+    '仕訳区分', '家事按分率(%)', '経費算入額', '源泉徴収税額']
     .map(csvCell).join(',');
-  const rows   = allTransactions.map(t => {
+  const rows   = exportRows.map(({ tx: t, row }) => {
     const pm  = t.paymentMethod || t.payment || 'cash';
     const wt  = t.walletType === 'business' ? '事業' : '個人';
     const st  = csvStatusLabel(t);
     const sd  = csvSettlementDate(t);
-    const dr  = t.debit?.account  || '';
-    const cr  = t.credit?.account || '';
+    const isExpense  = t.type === 'expense';
+    const rate       = isExpense ? (prorationSettings[t.categoryId || 'other'] ?? 100) : '';
+    const deductible = isExpense && isRecognizedExpense(t) ? Math.floor((Number(t.amount) || 0) * rate / 100) : '';
     return [
-      t.date,
+      row.date || '入金日未登録',
       t.type === 'income' ? '収入' : '経費',
       t.desc,
       t.categoryName,
-      t.amount,
+      row.amount,
       pm === 'card' ? 'クレカ' : '現金・振込',
-      wt, st, sd, dr, cr, t.memo,
+      wt, st, sd, row.debit, row.credit, t.memo,
+      row.kind, rate, deductible, row.isSale ? txWithholdingTax(t) : '',
     ].map(csvCell).join(',');
-  }).join('\n');
+  }).join('\r\n');
   const blob = new Blob(['\uFEFF' + header + '\r\n' + rows], { type: 'text/csv;charset=utf-8' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = 'rakuthrough_収支.csv';
+  a.download = year === null ? 'rakuthrough_収支_全期間.csv' : `rakuthrough_収支_${year}.csv`;
   a.click();
   URL.revokeObjectURL(url);
   showToast('CSVをダウンロードしました');
@@ -2570,6 +2644,34 @@ window.saveProration = async () => {
   } catch(e) { showToast('保存に失敗しました'); console.error(e); }
 };
 
+// 定額法の償却率（耐用年数表の率と同じ：1/耐用年数 を小数第3位で切り上げ）
+function straightLineRate(years) {
+  return Math.ceil(1000 / years) / 1000;
+}
+
+// 指定年の減価償却費（事業使用分）。取得年は月割り、耐用年数経過後は備忘価額1円を残して止める
+function depreciationForYear(asset, year) {
+  const price = Number(asset?.price) || 0;
+  const acquired = asset?.date?.slice(0, 10);
+  if (price <= 0 || !isValidIsoDate(acquired)) return 0;
+  const acqYear  = parseInt(acquired.slice(0, 4));
+  const acqMonth = parseInt(acquired.slice(5, 7));
+  if (year < acqYear) return 0;
+  const bizRate = (Number(asset.rate) || 100) / 100;
+  if (asset.isSpecial && price < 400000) return year === acqYear ? Math.round(price * bizRate) : 0;
+  const years = Number(asset.years) || 0;
+  if (years <= 0) return 0;
+  const fullYear = price * straightLineRate(years);
+  let bookValue = price;
+  let expense   = 0;
+  for (let y = acqYear; y <= year; y++) {
+    const months = y === acqYear ? 12 - acqMonth + 1 : 12;
+    expense = Math.max(0, Math.min(Math.ceil(fullYear * months / 12), bookValue - 1));
+    bookValue -= expense;
+  }
+  return Math.round(expense * bizRate);
+}
+
 function renderDeprecSummary(year) {
   const el  = document.getElementById('deprec-summary');
   const btn = document.getElementById('deprec-post-btn');
@@ -2579,11 +2681,11 @@ function renderDeprecSummary(year) {
     return;
   }
   btn.style.display = 'block';
-  const total = allAssets.reduce((s, a) => s + (a.annualExpense || 0), 0);
+  const total = allAssets.reduce((s, a) => s + depreciationForYear(a, year), 0);
   el.innerHTML = allAssets.map(a => `
     <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-bottom:1px solid var(--border)">
       <span style="color:var(--ink2)">${escapeHtml(a.name)}</span>
-      <span style="font-family:var(--mono);color:var(--red)">¥${(a.annualExpense||0).toLocaleString()}</span>
+      <span style="font-family:var(--mono);color:var(--red)">¥${depreciationForYear(a, year).toLocaleString()}</span>
     </div>`).join('') +
     `<div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;font-weight:700">
       <span>合計</span><span style="font-family:var(--mono);color:var(--red)">¥${total.toLocaleString()}</span>
@@ -2592,7 +2694,7 @@ function renderDeprecSummary(year) {
 
 window.postDepreciation = async () => {
   const year  = parseInt(document.getElementById('tax-year').value);
-  const total = allAssets.reduce((s, a) => s + (a.annualExpense || 0), 0);
+  const total = allAssets.reduce((s, a) => s + depreciationForYear(a, year), 0);
   if (!total) { showToast('計上する減価償却費がありません'); return; }
   const exists = allTransactions.find(t => t.categoryId === 'deprec' && t.fiscalYear === year);
   if (exists)  { showToast(`${year}年分はすでに計上済みです`); return; }
@@ -2663,7 +2765,9 @@ function renderPL(year) {
   });
   if (Object.keys(expenseMap).length) html += plRow('経費合計', totalExpense, { bold: true, border: true });
   html += plRow('会計上の利益（控除前・参考）', accountingProfit, { bold: true, border: true, blue: accountingProfit >= 0, red: accountingProfit < 0 });
-  html += `<div style="font-size:11px;color:var(--ink3);line-height:1.6;margin-top:8px">※ 青色申告特別控除は自動適用していません。適用可否と金額は申告時に確認してください。</div>`;
+  const withholdingTotal = calcWithholdingTotal(year);
+  if (withholdingTotal > 0) html += plRow('源泉徴収税額（年間合計・参考）', withholdingTotal, { border: true });
+  html += `<div style="font-size:11px;color:var(--ink3);line-height:1.6;margin-top:8px">※ 青色申告特別控除は自動適用していません。適用可否と金額は申告時に確認してください。${withholdingTotal > 0 ? '<br>※ 源泉徴収税額は取引先の支払調書・請求書と照合してください。' : ''}</div>`;
   el.innerHTML = html;
 }
 
@@ -2757,7 +2861,7 @@ window.previewAsset = () => {
   } else if (years > 0) {
     const annualAmount = Math.round(price / years * rate / 100);
     html = `📊 <b>定額法・年間償却額：¥${annualAmount.toLocaleString()}</b>（${years}年間）<br>
-      <span style="font-size:11px">¥${price.toLocaleString()} ÷ ${years}年 × ${rate}% = ¥${annualAmount.toLocaleString()}/年</span>`;
+      <span style="font-size:11px">¥${price.toLocaleString()} ÷ ${years}年 × ${rate}% = ¥${annualAmount.toLocaleString()}/年<br>※ 取得した年は使用月数で月割りします</span>`;
   } else {
     preview.classList.remove('show'); return;
   }
@@ -2822,11 +2926,13 @@ function renderAssets() {
     list.innerHTML = '<div class="empty-state" style="padding:20px 0;font-size:13px">資産が登録されていません</div>';
     return;
   }
-  const totalAnnual = allAssets.reduce((s, a) => s + (a.annualExpense || 0), 0);
+  const thisYear    = new Date().getFullYear();
+  const yearAmount  = a => a.isSpecial ? depreciationForYear(a, parseInt(a.date?.slice(0, 4))) : depreciationForYear(a, thisYear);
+  const totalAnnual = allAssets.reduce((s, a) => s + depreciationForYear(a, thisYear), 0);
   list.innerHTML = allAssets.map(a => {
     const badge    = a.isSpecial ? `<span class="asset-badge special">少額特例</span>` : `<span class="asset-badge normal">定額法 ${escapeHtml(a.years)}年</span>`;
     const metaText = [`取得日：${a.date}`, `取得価額：¥${(a.price||0).toLocaleString()}`, a.rate < 100 ? `事業割合：${a.rate}%` : null].filter(Boolean).join('　');
-    const labelText = a.isSpecial ? '取得年一括経費額' : '年間償却費（定額法）';
+    const labelText = a.isSpecial ? '取得年一括経費額' : `${thisYear}年の償却費（取得年は月割り）`;
     return `
       <div class="asset-card ${a.isSpecial ? 'special' : ''}">
         <div class="asset-card-header">
@@ -2837,12 +2943,12 @@ function renderAssets() {
         <div class="asset-meta" style="margin-top:6px">${escapeHtml(metaText)}</div>
         <div class="asset-amount-row">
           <div class="asset-amount-label">${labelText}</div>
-          <div class="asset-amount-value">¥${(a.annualExpense||0).toLocaleString()}</div>
+          <div class="asset-amount-value">¥${yearAmount(a).toLocaleString()}</div>
         </div>
       </div>`;
   }).join('') + `
     <div style="text-align:right;font-size:12px;color:var(--ink2);margin-top:6px;font-family:var(--mono)">
-      年間経費合計：<b>¥${totalAnnual.toLocaleString()}</b>
+      ${thisYear}年の経費合計：<b>¥${totalAnnual.toLocaleString()}</b>
     </div>`;
 }
 
@@ -2876,6 +2982,8 @@ window.printSummary = () => {
   Object.values(expenseMap).forEach(e => { plHtml += prow(e.name, e.amount, { indent: true, red: true }); });
   if (Object.keys(expenseMap).length) plHtml += prow('経費合計', totalExpense, { bold: true, border: true });
   plHtml += prow('会計上の利益（控除前・参考）', accountingProfit, { bold: true, border: true, blue: accountingProfit >= 0, red: accountingProfit < 0 });
+  const withholdingTotal = calcWithholdingTotal(year);
+  if (withholdingTotal > 0) plHtml += prow('源泉徴収税額（年間合計・参考）', withholdingTotal, { border: true });
   plHtml += `<div style="font-size:10px;color:#6b6a64;line-height:1.6;margin-top:6px">※ 青色申告特別控除は自動適用していません。適用可否と金額は申告時に確認してください。</div>`;
 
   let bsHtml = `<div style="font-size:11px;font-weight:700;color:#6b6a64;margin-bottom:6px">【資産】</div>`;
@@ -2898,13 +3006,16 @@ window.printSummary = () => {
       </div>`
     : '';
 
-  const proKeys = Object.keys(prorationSettings);
-  const proHtml = proKeys.length
+  // 家事按分：prorationSettings は { カテゴリID: 事業割合 }。100%未満の科目だけ載せる
+  const proRows = Object.entries(prorationSettings)
+    .filter(([, rate]) => Number(rate) < 100)
+    .map(([id, rate]) => ({ name: categories.find(c => c.id === id)?.name || id, rate }));
+  const proHtml = proRows.length
     ? `<div style="margin-bottom:20px;padding:14px;border:1px solid #ddd;border-radius:8px;">
-        <div style="font-size:13px;font-weight:700;margin-bottom:10px;">家事按分設定</div>
-        ${Object.values(prorationSettings).map(p =>
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px;">家事按分設定（事業利用割合）</div>
+        ${proRows.map(p =>
           `<div style="display:flex;justify-content:space-between;font-size:13px;padding:4px 0;color:#6b6a64;">
-            <span>${escapeHtml(p.name)}</span><span style="font-family:monospace">${escapeHtml(p.ratio)}%</span></div>`
+            <span>${escapeHtml(p.name)}</span><span style="font-family:monospace">${escapeHtml(p.rate)}%</span></div>`
         ).join('')}
       </div>` : '';
 

@@ -53,6 +53,12 @@ const functionNames = [
   'renderAccountingReview',
   'updateCloseYearAvailability',
   'txCard',
+  'txWithholdingTax',
+  'calcWithholdingTotal',
+  'receiptLines',
+  'journalRows',
+  'straightLineRate',
+  'depreciationForYear',
 ];
 const accountingSource = `function fmt(n) { return '¥' + Math.round(n).toLocaleString(); }\n`
   + [statusConst[0], ...functionNames.map(extractFunction)].join('\n') + `
@@ -77,6 +83,12 @@ this.__accounting = {
   renderAccountingReview,
   updateCloseYearAvailability,
   txCard,
+  txWithholdingTax,
+  calcWithholdingTotal,
+  receiptLines,
+  journalRows,
+  straightLineRate,
+  depreciationForYear,
 };`;
 
 const elements = {
@@ -258,5 +270,60 @@ assert.match(closeFunction[0], /自動締め・翌年繰越は現在停止中/);
 assert.doesNotMatch(closeFunction[0], /setDoc|getDoc|updateDoc|addDoc|deleteDoc/, 'disabled close function must not call Firestore');
 assert.match(html, /id="close-year-btn"[^>]*disabled/, 'year close button must be disabled in initial HTML');
 assert.doesNotMatch(html, /const blueDeduction = 650000/, 'automatic 650,000 yen deduction must be removed');
+
+// ===== 2026-11-08 申告前修正（A/B案）=====
+const plain = value => JSON.parse(JSON.stringify(value));
+
+// 源泉徴収税額の年間合計：取消・返金・他年度は含めない
+setFixture([
+  { id: 'w1', type: 'income', amount: 100000, withholdingTax: 10210, isWithholding: true, status: 'settled', date: '2026-06-01', fiscalYear: 2026 },
+  { id: 'w2', type: 'income', amount: 50000, withholdingTax: 5105, isWithholding: true, status: 'pending', date: '2026-07-01', fiscalYear: 2026 },
+  { id: 'w3', type: 'income', amount: 50000, withholdingTax: 5105, isWithholding: true, status: 'canceled', date: '2026-07-02', fiscalYear: 2026 },
+  { id: 'w4', type: 'income', amount: 50000, withholdingTax: 5105, isWithholding: true, status: 'settled', date: '2025-07-02', fiscalYear: 2025 },
+]);
+assert.equal(api.calcWithholdingTotal(2026), 15315, 'withholding total must include settled and receivable income of the year only');
+
+// 売掛→入金：売上行（売掛金/売上高）と入金行（事業主貸/売掛金）を分ける。旧データで借方が上書きされていても復元する
+assert.deepEqual(plain(api.journalRows({ type: 'income', amount: 30000, status: 'settled', date: '2026-12-20', settledAt: '2027-01-10', walletType: 'personal', debit: { account: '事業主貸' }, credit: { account: '売上高' } }).map(r => [r.date, r.kind, r.debit, r.credit, r.amount])),
+  [['2026-12-20', '売上', '売掛金', '売上高', 30000], ['2027-01-10', '入金', '事業主貸', '売掛金', 30000]],
+  'settled receivable must produce separate sale and settlement journal rows');
+assert.equal(api.journalRows({ type: 'income', amount: 30000, status: 'settled', date: '2026-12-20', settledAt: '2027-01-10', walletType: 'business' })[1].debit, '普通預金', 'business wallet settlement must debit the bank account');
+
+// 事業口座＋源泉：受取額（普通預金）と源泉税（事業主貸）に分ける
+assert.deepEqual(plain(api.journalRows({ type: 'income', amount: 100000, withholdingTax: 10210, isWithholding: true, status: 'settled', date: '2026-06-01', walletType: 'business' }).map(r => [r.debit, r.credit, r.amount])),
+  [['普通預金', '売上高', 89790], ['事業主貸', '売上高', 10210]], 'withholding on business account must split received amount and tax');
+
+// 通常の経費は保存済みの仕訳をそのまま出す
+assert.deepEqual(plain(api.journalRows({ type: 'expense', amount: 5000, status: 'settled', date: '2026-03-01', debit: { account: '通信費' }, credit: { account: '事業主借' } }).map(r => [r.debit, r.credit, r.amount])),
+  [['通信費', '事業主借', 5000]], 'expense rows must keep the stored journal entry');
+
+// 減価償却：償却率・取得年の月割り・耐用年数経過後の停止・事業割合・少額特例
+assert.equal(api.straightLineRate(4), 0.25);
+assert.equal(api.straightLineRate(6), 0.167);
+const pc = { price: 240000, date: '2026-10-15', years: 4, rate: 100, isSpecial: false };
+assert.equal(api.depreciationForYear(pc, 2025), 0, 'no depreciation before acquisition');
+assert.equal(api.depreciationForYear(pc, 2026), 15000, 'acquisition year must be prorated by months used (3/12)');
+assert.equal(api.depreciationForYear(pc, 2027), 60000, 'full year after acquisition');
+assert.equal(api.depreciationForYear(pc, 2030), 44999, 'final year must leave 1 yen memorandum value');
+assert.equal(api.depreciationForYear(pc, 2031), 0, 'depreciation must stop after useful life');
+let total = 0;
+for (let y = 2026; y <= 2032; y += 1) total += api.depreciationForYear(pc, y);
+assert.equal(total, 239999, 'total depreciation must equal price minus 1 yen');
+assert.equal(api.depreciationForYear({ ...pc, rate: 70 }, 2027), 42000, 'business-use rate must apply to the yearly amount');
+const special = { price: 150000, date: '2026-05-01', years: 4, rate: 80, isSpecial: true };
+assert.equal(api.depreciationForYear(special, 2026), 120000, 'small asset special rule expenses all in the acquisition year');
+assert.equal(api.depreciationForYear(special, 2027), 0, 'small asset special rule must not repeat in later years');
+
+// 印刷の家事按分欄：{カテゴリID: 割合} を参照する（name/ratio を読まない）
+const printFunction = html.match(/window\.printSummary = \(\) => \{[\s\S]*?\n\};/);
+assert.ok(printFunction, 'print function should exist');
+assert.doesNotMatch(printFunction[0], /p\.ratio|Object\.values\(prorationSettings\)/, 'print proration must not read nonexistent name/ratio fields');
+assert.match(printFunction[0], /Object\.entries\(prorationSettings\)/, 'print proration must read {categoryId: rate}');
+assert.match(printFunction[0], /calcWithholdingTotal\(year\)/, 'print must show annual withholding total');
+
+// 入金処理で売上時の借方を上書きしない
+const settleFunction = html.match(/window\.confirmSettle = async \(\) => \{[\s\S]*?\n\};/);
+assert.ok(settleFunction, 'settle function should exist');
+assert.doesNotMatch(settleFunction[0], /debit:/, 'settlement must not overwrite the sale debit');
 
 console.log('PASS: RakuThrough accounting batch checks');
