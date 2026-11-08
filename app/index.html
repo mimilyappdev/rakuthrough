@@ -1008,21 +1008,17 @@ input[type="date"]::-webkit-date-and-time-value { text-align: left; }
       <button onclick="startCheckout('price_1TeFGWRXW1evPVMUHPTm6XpL')" style="width:100%;padding:14px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);text-align:left;cursor:pointer;font-family:'Noto Sans JP',sans-serif">
         <div style="font-size:13px;font-weight:700">月額プラン</div>
         <div style="font-size:20px;font-weight:700;margin:2px 0">¥550 <span style="font-size:12px;font-weight:400">/月</span></div>
-        <div style="font-size:11px;opacity:0.85">全機能・収支出力込み</div>
+        <div style="font-size:11px;opacity:0.85">入力無制限・テーマ／申告準備サマリー・CSVは7か月目から</div>
       </button>
       <button onclick="startCheckout('price_1TeFJLRXW1evPVMUM7vJgskA')" style="width:100%;padding:14px;background:var(--surface);color:var(--ink);border:2px solid var(--accent);border-radius:var(--radius-sm);text-align:left;cursor:pointer;font-family:'Noto Sans JP',sans-serif">
         <div style="font-size:13px;font-weight:700">年額プラン <span style="font-size:11px;color:var(--green);font-weight:600">お得</span></div>
         <div style="font-size:20px;font-weight:700;margin:2px 0">¥3,980 <span style="font-size:12px;font-weight:400">/年</span></div>
-        <div style="font-size:11px;color:var(--ink2)">月換算 ¥331・全機能・収支出力込み</div>
+        <div style="font-size:11px;color:var(--ink2)">月換算 ¥331・全機能・申告準備サマリーとCSVもすぐ使える</div>
       </button>
     </div>
-    <div id="upgrade-plans-export" style="display:none;gap:8px;margin-bottom:16px">
-      <button onclick="startCheckout('price_1TeFKpRXW1evPVMU5QSgaMur')" style="width:100%;padding:14px;background:var(--accent);color:white;border:none;border-radius:var(--radius-sm);text-align:left;cursor:pointer;font-family:'Noto Sans JP',sans-serif;margin-bottom:8px">
-        <div style="font-size:13px;font-weight:700">収支出力のみ</div>
-        <div style="font-size:20px;font-weight:700;margin:2px 0">¥1,500 <span style="font-size:12px;font-weight:400">今年の12/31まで</span></div>
-        <div style="font-size:11px;opacity:0.85">申告準備用の参考資料を出力したい方向け</div>
-      </button>
-      <button onclick="showUpgradeProPlans()" style="width:100%;padding:12px;background:var(--surface);color:var(--ink2);border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;cursor:pointer;font-family:'Noto Sans JP',sans-serif">全機能プランを見る</button>
+    <!-- 月額契約中の人向け：Checkoutを使うと二重契約になるため、切り替えは問い合わせで受ける -->
+    <div id="upgrade-plans-switch" style="display:none;margin-bottom:16px;font-size:12px;color:var(--ink2);line-height:1.7;text-align:center">
+      年額プランへの切り替えは、<a href="https://docs.google.com/forms/d/e/1FAIpQLSfRH7H6j4ILYkjOFriAHmpOzxJwag1VeHU6KYD1pq2kfwvjEA/viewform" target="_blank" rel="noopener" style="color:var(--accent)">お問い合わせ</a>からご連絡ください。
     </div>
     <button style="width:100%;padding:12px;background:transparent;color:var(--ink2);border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;cursor:pointer;font-family:'Noto Sans JP',sans-serif" onclick="closeUpgradeModal()">閉じる</button>
   </div>
@@ -2264,7 +2260,7 @@ async function loadProrationSettings() {
 }
 
 window.exportCSV = async () => {
-  if (!canExport()) { showUpgradeModal('収支出力は有料プランでご利用いただけます。', 'export'); return; }
+  if (!canExport()) { showUpgradeModal(taxAccessMessage('CSV出力'), 'tax'); return; }
   if (!allTransactions.length) { showToast('取引データがありません'); return; }
   const yearValue = document.getElementById('csv-year')?.value || 'all';
   const year = yearValue === 'all' ? null : parseInt(yearValue);
@@ -2422,8 +2418,30 @@ setInterval(rotateCatchcopy, 3000);
 let userPlan = 'free'; // 'free' | 'export' | 'pro' | 'lifetime'
 const DEV_PRO_EMAILS = ['miumiu7tanaka@gmail.com'];
 
+// 月額プランで申告機能（申告準備サマリー・印刷・CSV）が使えるようになる支払い回数
+const TAX_ACCESS_MONTHLY_PAYMENTS = 7;
+let billingInfo = {}; // { billingInterval, paidMonths, taxAccessGrandfathered }
+
 function isPro()      { return userPlan === 'pro' || userPlan === 'lifetime'; }
-function canExport()  { return isPro() || userPlan === 'export'; }
+
+// 申告機能：年額・買い切りはすぐ、月額は通算7回目の支払いから（料金改定前からの契約者は据え置き）
+function resolveTaxAccess(plan, info) {
+  if (plan === 'lifetime') return true;
+  if (plan !== 'pro') return false;
+  if (info?.billingInterval !== 'monthly') return true; // 年額・契約種別未保存（改定前の契約）
+  return Boolean(info.taxAccessGrandfathered) || (Number(info.paidMonths) || 0) >= TAX_ACCESS_MONTHLY_PAYMENTS;
+}
+function hasTaxAccess() { return resolveTaxAccess(userPlan, billingInfo); }
+function canExport()    { return hasTaxAccess() || userPlan === 'export'; }
+
+// 申告機能が使えないときの案内文
+function taxAccessMessage(feature) {
+  if (userPlan === 'pro' && billingInfo.billingInterval === 'monthly') {
+    const remaining = Math.max(1, TAX_ACCESS_MONTHLY_PAYMENTS - (Number(billingInfo.paidMonths) || 0));
+    return `${feature}は、月額プランでは${TAX_ACCESS_MONTHLY_PAYMENTS}か月目（あと${remaining}回のお支払い）から使えます。年額プランに切り替えるとすぐに使えます。`;
+  }
+  return `${feature}は年額プランならすぐに使えます（月額プランは${TAX_ACCESS_MONTHLY_PAYMENTS}か月目から）。`;
+}
 
 function resolveUserPlan(billingData, legacyData, now = new Date()) {
   const plan       = billingData?.plan ?? legacyData?.plan ?? 'free';
@@ -2439,6 +2457,7 @@ async function loadUserPlan() {
   // 開発者メールは常にpro
   if (DEV_PRO_EMAILS.includes(currentUser.email)) {
     userPlan = 'pro';
+    billingInfo = { taxAccessGrandfathered: true };
     applyPlanUI();
     return;
   }
@@ -2454,6 +2473,11 @@ async function loadUserPlan() {
     const legacySnap = await legacyPromise;
     const legacyData = legacySnap.exists() ? legacySnap.data() : null;
     userPlan = resolveUserPlan(billingData, legacyData);
+    billingInfo = {
+      billingInterval: billingData?.billingInterval,
+      paidMonths: billingData?.paidMonths,
+      taxAccessGrandfathered: billingData?.taxAccessGrandfathered,
+    };
   } catch(e) { console.error('loadUserPlan:', e); }
   applyPlanUI();
 }
@@ -2471,25 +2495,16 @@ function applyPlanUI() {
   if (lockW) lockW.style.display = pro ? 'none'   : 'block';
   // 申告サマリーの鍵アイコン
   const taxLock = document.getElementById('tax-summary-lock');
-  if (taxLock) taxLock.style.display = pro ? 'none' : 'inline';
+  if (taxLock) taxLock.style.display = hasTaxAccess() ? 'none' : 'inline';
 }
 
 window.showUpgradeModal = (desc, type = 'pro') => {
   if (desc) document.getElementById('upgrade-modal-desc').textContent = desc;
-  const proPlan    = document.getElementById('upgrade-plans-pro');
-  const exportPlan = document.getElementById('upgrade-plans-export');
-  if (type === 'export') {
-    proPlan.style.display    = 'none';
-    exportPlan.style.display = 'grid';
-  } else {
-    proPlan.style.display    = 'grid';
-    exportPlan.style.display = 'none';
-  }
+  // すでに有料契約中の人に新しいCheckoutを出すと二重契約になるので、切り替え案内だけ出す
+  const subscribed = isPro();
+  document.getElementById('upgrade-plans-pro').style.display    = subscribed ? 'none' : 'grid';
+  document.getElementById('upgrade-plans-switch').style.display = subscribed && type === 'tax' ? 'block' : 'none';
   document.getElementById('upgrade-modal').style.display = 'flex';
-};
-window.showUpgradeProPlans = () => {
-  document.getElementById('upgrade-plans-pro').style.display    = 'grid';
-  document.getElementById('upgrade-plans-export').style.display = 'none';
 };
 window.closeUpgradeModal = () => {
   document.getElementById('upgrade-modal').style.display = 'none';
@@ -2513,7 +2528,7 @@ window.startCheckout = async (priceId) => {
 };
 
 window.openTaxSummary = (header) => {
-  if (!isPro()) { showUpgradeModal('申告サマリー（P/L・B/S）は有料プランでご利用いただけます。'); return; }
+  if (!hasTaxAccess()) { showUpgradeModal(taxAccessMessage('申告準備サマリー'), 'tax'); return; }
   toggleAccordion(header);
   if (header.classList.contains('open')) { initTaxYearSelect(); loadTaxSummary(); }
 };

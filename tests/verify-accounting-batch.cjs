@@ -61,8 +61,9 @@ const functionNames = [
   'smallAssetLimit',
   'isSmallAssetSpecial',
   'depreciationForYear',
+  'resolveTaxAccess',
 ];
-const accountingSource = `function fmt(n) { return '¥' + Math.round(n).toLocaleString(); }\n`
+const accountingSource = `function fmt(n) { return '¥' + Math.round(n).toLocaleString(); }\nconst TAX_ACCESS_MONTHLY_PAYMENTS = 7;\n`
   + [statusConst[0], ...functionNames.map(extractFunction)].join('\n') + `
 this.__accounting = {
   escapeHtml,
@@ -93,6 +94,7 @@ this.__accounting = {
   smallAssetLimit,
   isSmallAssetSpecial,
   depreciationForYear,
+  resolveTaxAccess,
 };`;
 
 const elements = {
@@ -339,5 +341,18 @@ assert.match(printFunction[0], /calcWithholdingTotal\(year\)/, 'print must show 
 const settleFunction = html.match(/window\.confirmSettle = async \(\) => \{[\s\S]*?\n\};/);
 assert.ok(settleFunction, 'settle function should exist');
 assert.doesNotMatch(settleFunction[0], /debit:/, 'settlement must not overwrite the sale debit');
+
+// ===== 2026-11-08 料金改定：申告機能は年額・買い切りはすぐ、月額は7回目の支払いから =====
+assert.match(html, /const TAX_ACCESS_MONTHLY_PAYMENTS = 7;/, 'monthly threshold must be 7 payments');
+assert.equal(api.resolveTaxAccess('free', {}), false);
+assert.equal(api.resolveTaxAccess('export', {}), false, 'export-only plan keeps CSV via canExport but not the summary');
+assert.equal(api.resolveTaxAccess('lifetime', {}), true);
+assert.equal(api.resolveTaxAccess('pro', { billingInterval: 'yearly' }), true);
+assert.equal(api.resolveTaxAccess('pro', {}), true, 'subscriptions from before the change (no interval saved) keep access');
+assert.equal(api.resolveTaxAccess('pro', { billingInterval: 'monthly', paidMonths: 1 }), false);
+assert.equal(api.resolveTaxAccess('pro', { billingInterval: 'monthly', paidMonths: 6 }), false, '6 payments are not enough');
+assert.equal(api.resolveTaxAccess('pro', { billingInterval: 'monthly', paidMonths: 7 }), true, '7th payment unlocks');
+assert.equal(api.resolveTaxAccess('pro', { billingInterval: 'monthly', paidMonths: 1, taxAccessGrandfathered: true }), true, 'grandfathered monthly keeps access');
+assert.doesNotMatch(html, /startCheckout\('price_1TeFKpRXW1evPVMU5QSgaMur'\)/, 'export-only plan must not be sold anymore');
 
 console.log('PASS: RakuThrough accounting batch checks');

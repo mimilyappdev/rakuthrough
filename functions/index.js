@@ -12,7 +12,8 @@ const PRICE_PLAN_MAP = {
   'price_1TeFGWRXW1evPVMUHPTm6XpL': { plan: 'pro',      billing: 'monthly' },
   'price_1TeFJLRXW1evPVMUM7vJgskA': { plan: 'pro',      billing: 'yearly'  },
   'price_1TeFKKRXW1evPVMU0WQj0uhx': { plan: 'lifetime', billing: 'once'    },
-  'price_1TeFKpRXW1evPVMU5QSgaMur': { plan: 'export',   billing: 'once'    },
+  // 収支出力のみ：2026-11 料金改定で新規販売を終了（購入済みの人は期限まで有効）
+  'price_1TeFKpRXW1evPVMU5QSgaMur': { plan: 'export',   billing: 'once', discontinued: true },
 };
 
 function getBillingRef(db, uid) {
@@ -60,7 +61,7 @@ exports.createCheckoutSession = onCall(
     const { priceId, successUrl, cancelUrl } = request.data;
     const uid = request.auth.uid;
     const planInfo = PRICE_PLAN_MAP[priceId];
-    if (!planInfo) throw new HttpsError('invalid-argument', 'Invalid plan.');
+    if (!planInfo || planInfo.discontinued) throw new HttpsError('invalid-argument', 'Invalid plan.');
 
     const stripe = require('stripe')(stripeSecretKey.value());
     const db = getFirestore();
@@ -221,13 +222,31 @@ exports.stripeWebhook = onRequest(
       const customerId = typeof subscription.customer === 'string'
         ? subscription.customer
         : subscription.customer?.id;
-      await getBillingRef(db, uid).set({
+      const billingRef = getBillingRef(db, uid);
+      const current = (await billingRef.get()).data() || {};
+      const update = {
         plan: 'pro',
+        billingInterval: planInfo.billing,
         stripeCustomerId: customerId,
         subscriptionStatus: 'active',
         planExpiry: getSubscriptionExpiry(subscription),
         updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
+      };
+      // 料金改定前からの契約者（契約種別が未保存のpro）は、申告機能をそのまま使えるようにする
+      if (current.plan === 'pro' && !current.billingInterval) update.taxAccessGrandfathered = true;
+      // 月額の支払い回数を通算で数える（7回目から申告機能）。同じ請求書は1回だけ数える
+      if (planInfo.billing === 'monthly' && (invoice.amount_paid || 0) > 0) {
+        try {
+          await db.doc(`stripeApps/rakuthrough/paidInvoices/${invoice.id}`).create({
+            uid,
+            countedAt: FieldValue.serverTimestamp(),
+          });
+          update.paidMonths = FieldValue.increment(1);
+        } catch (err) {
+          if (err.code !== 6) throw err; // 6 = ALREADY_EXISTS（数え済み）
+        }
+      }
+      await billingRef.set(update, { merge: true });
     }
 
     if (event.type === 'customer.subscription.deleted') {
