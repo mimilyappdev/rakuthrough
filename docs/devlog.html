@@ -132,6 +132,42 @@
     </div>
   </div>
 
+  <!-- 2026-11-09 -->
+  <div class="entry">
+    <div class="date">2026年11月9日</div>
+    <div class="entry-title">Netlify本番（LP・アプリ）をGit版に置き換えた</div>
+
+    <div class="topic">
+      <div class="topic-label">やったこと</div>
+      <div class="topic-body">
+        <ul>
+          <li>本番アプリ（rakuthrough-app）が8〜9月の古い系統のままだった：65万円自動控除の不具合、表示の安全対策なし、isPro が「free以外は全部有料」、購入導線なし。</li>
+          <li>本番LP（rakuthrough）は無料プランを「件数無制限・CSV出力」と誤表示、特商法リンクなし。</li>
+          <li>LP：Git <code>447a5fe</code> の index.html ＋ 既存の <code>/app/</code> 転送ページでデプロイ（deploy <code>6af090a5f179e725a10175de</code>）。</li>
+          <li>アプリ：Git <code>782a5d2</code> から「新しいURLへ移行しています」案内2行だけ外してデプロイ（deploy <code>6af090b84a35f683fbdd4bcb</code>）。料金改定は含めていない。</li>
+          <li>先にプレビューデプロイで表示・コンソールエラー・リンクを確認してから本番へ。</li>
+          <li>デプロイ元：<code>rakuthrough/deploy-20261109/</code>。デプロイ前の本番ファイル：<code>rakuthrough/backup/20261109_netlify_live_before/</code></li>
+        </ul>
+        <div class="decided">
+          戻すとき：Netlify管理画面の Deploys で前の版（LP <code>6a96f772977f2f44a4a834fa</code>／アプリ <code>6a96f7448aa4794e2e29835f</code>）を「Publish deploy」。
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">残タスク</div>
+      <div class="topic-body">
+        <ul>
+          <li>本番でのGoogleログイン後の動作確認（ユーザー確認待ち）。</li>
+          <li>Netlifyは手動デプロイ。デプロイ元をGitに一本化する手順（今回は deploy フォルダをGitから作成）を固めたい。</li>
+          <li>料金改定は未commit。反映は Functions → アプリ の順。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <!-- 2026-11-08 -->
   <div class="entry">
     <div class="date">2026年11月8日</div>
