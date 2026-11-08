@@ -135,7 +135,7 @@
   <!-- 2026-11-09 -->
   <div class="entry">
     <div class="date">2026年11月9日</div>
-    <div class="entry-title">Netlify本番（LP・アプリ）をGit版に置き換えた</div>
+    <div class="entry-title">Netlify本番（LP・アプリ）をGit版に置き換え／科目の参考例を復活・税務相談の案内・少額特例の修正</div>
 
     <div class="topic">
       <div class="topic-label">やったこと</div>
@@ -157,10 +157,59 @@
     <hr class="divider">
 
     <div class="topic">
+      <div class="topic-label">科目の参考例・税務相談の案内・少額特例（commit eeadb29・未push・未デプロイ）</div>
+      <div class="topic-body">
+        <ul>
+          <li><b>科目の参考例を復活</b>：科目を選ぶと入力欄の下に「参考例：〜など」を表示（経費は薄い赤、収入は薄い青）。13科目分。自分で追加した科目は表示なし。</li>
+          <li><b>消えた時期を調査</b>：4月の最初期からあった科目説明（<code>desc</code> と <code>#cat-desc-box</code>）が、2026-05-05 12:21 のGitHub画面からのアップロード（<code>cf8cc79</code>、597行削除）で説明のない版に丸ごと置き換わって消えていた。最後に残っていた版は <code>26c4302</code>（同日12:00）。最初は5月以降の履歴しか見ておらず「見つからない」と報告してしまった → 全履歴（4/24〜）を検索して判明。</li>
+          <li><b>設定画面の最後に案内を常時表示</b>：「集計・計算結果は確定申告の準備に使う参考情報。税務署（国税局の電話相談センター）や税理士に相談」「税制は改正されることがある。国税庁で確認」。</li>
+          <li><b>少額減価償却資産の特例を取得日で判定</b>：2026/4/1以後の取得は40万円未満、それより前は30万円未満（ちょうど40万円は対象外）。特例を選べる画面に「措法28の2」の記載と年300万円上限の注意。コメントの期限を2029年3月末に訂正。</li>
+          <li>出典：財務省 令和8年度税制改正の大綱（所得税も同様）、国税庁 No.5408（法人向け）・法人税の改正の概要。個人の細かい要件（従業員数など）は国税庁の個人向けページで未確認。</li>
+          <li>開発者本人の資産は購入済み分が30万円未満、4月以降の予定も40万円未満なので、本人の申告には影響なし。</li>
+          <li><b>commitの分け方</b>：同じファイルに未commitの料金改定が混ざっていたため、差分のhunkを選んで「2〜4だけの版」を作り、テストPASSと料金改定の痕跡なしを確認してからそれだけをcommit。作業ツリーの料金改定はそのまま残してある。</li>
+          <li>バックアップ：<code>backup/20261109_before_commit_2to4/</code>（commit前の作業ツリー全体）</li>
+        </ul>
+        <div class="decided">
+          参考例の文言は「必ずこの科目」と言い切らない「参考例：〜など」の形にする（ユーザー案）。他の家計簿・申告アプリ（TaxNote）にも同様の表示があり、問題にはなりにくいと判断。
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">⚠ 検討してやめたこと</div>
+      <div class="topic-body">
+        <ul>
+          <li>⚠ 当時の説明文をそのまま戻す：「10万円未満の備品」「専用科目の追加を検討してください」など言い切りに近い部分があるため、参考例中心の文言に書き直した。</li>
+          <li>⚠ 仕入高・車両費の説明：今の初期科目にないので入れない（ユーザー判断）。</li>
+          <li>⚠ 料金改定と2〜4をまとめてcommit：料金改定はStripe確認とデプロイ順の制約があるので、先に出せる2〜4と分けた。</li>
+        </ul>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">関連資料</div>
+      <div class="topic-body">
+        <ul>
+          <li>検討ページ（kento.html）は今回作っていない。料金設計の検討内容（申告パック案・年額のみ案・6か月案の却下理由）は 11/8 のエントリにまとめてある。</li>
+          <li>偽Firebaseでの試験結果：<code>rakuthrough/tests/mock-trial-20261108/結果.md</code></li>
+          <li>9月の監査提案：<code>rakuthrough/docs/RakuThrough_監査対応提案_20260907.md</code></li>
+          <li>e-Tax入力手順（給与あり）：<code>06青色申告対応/</code>。給与所得もある場合は源泉徴収票も必要。</li>
+        </ul>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
       <div class="topic-label">残タスク</div>
       <div class="topic-body">
         <ul>
-          <li>本番でのGoogleログイン後の動作確認（ユーザー確認待ち）。</li>
+          <li>eeadb29（2〜4）のpushと、Netlify本番アプリへのデプロイ（GOが必要）。</li>
+          <li>本番でのGoogleログイン後の動作確認（11/9 ユーザー確認済み：ログインOK）。</li>
           <li>Netlifyは手動デプロイ。デプロイ元をGitに一本化する手順（今回は deploy フォルダをGitから作成）を固めたい。</li>
           <li>料金改定は未commit。反映は Functions → アプリ の順。</li>
         </ul>
