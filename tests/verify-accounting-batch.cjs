@@ -58,6 +58,8 @@ const functionNames = [
   'receiptLines',
   'journalRows',
   'straightLineRate',
+  'smallAssetLimit',
+  'isSmallAssetSpecial',
   'depreciationForYear',
 ];
 const accountingSource = `function fmt(n) { return '¥' + Math.round(n).toLocaleString(); }\n`
@@ -88,6 +90,8 @@ this.__accounting = {
   receiptLines,
   journalRows,
   straightLineRate,
+  smallAssetLimit,
+  isSmallAssetSpecial,
   depreciationForYear,
 };`;
 
@@ -313,6 +317,16 @@ assert.equal(api.depreciationForYear({ ...pc, rate: 70 }, 2027), 42000, 'busines
 const special = { price: 150000, date: '2026-05-01', years: 4, rate: 80, isSpecial: true };
 assert.equal(api.depreciationForYear(special, 2026), 120000, 'small asset special rule expenses all in the acquisition year');
 assert.equal(api.depreciationForYear(special, 2027), 0, 'small asset special rule must not repeat in later years');
+
+// 少額特例の上限：2026/4/1以後の取得は40万円未満、それより前は30万円未満
+assert.equal(api.smallAssetLimit('2026-03-31'), 300000);
+assert.equal(api.smallAssetLimit('2026-04-01'), 400000);
+assert.equal(api.isSmallAssetSpecial(399999, '2026-04-01'), true);
+assert.equal(api.isSmallAssetSpecial(400000, '2026-04-01'), false, 'exactly 400,000 yen is not eligible');
+assert.equal(api.isSmallAssetSpecial(350000, '2026-03-15'), false, 'before April 2026 the limit is under 300,000 yen');
+const beforeApril = { price: 350000, date: '2026-03-15', years: 4, rate: 100, isSpecial: true };
+assert.equal(api.depreciationForYear(beforeApril, 2026), 72917, 'ineligible special flag must fall back to straight-line (87,500 x 10/12, rounded up)');
+assert.equal(api.depreciationForYear({ ...beforeApril, date: '2026-04-01' }, 2026), 350000, 'eligible from April 2026');
 
 // 印刷の家事按分欄：{カテゴリID: 割合} を参照する（name/ratio を読まない）
 const printFunction = html.match(/window\.printSummary = \(\) => \{[\s\S]*?\n\};/);
