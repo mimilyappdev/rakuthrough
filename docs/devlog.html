@@ -132,6 +132,101 @@
     </div>
   </div>
 
+  <!-- 2026-11-08 -->
+  <div class="entry">
+    <div class="date">2026年11月8日</div>
+    <div class="entry-title">確定申告に向けた監査と申告前修正・料金改定（月額は7か月目から申告機能）</div>
+
+    <div class="topic">
+      <div class="topic-label">監査の結論</div>
+      <div class="topic-body">
+        <ul>
+          <li>白色・青色10万円控除の準備には使える。65万円控除に必要な正式な貸借対照表は出せない（預金・事業主貸借・固定資産の残高がない）。</li>
+          <li>開発者本人は開業届・青色承認申請済み。Stripe売上は総額で収入、手数料は経費。11月下旬に6月分まで入力して試運転予定。</li>
+        </ul>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">申告前修正（commit 782a5d2・push済み）</div>
+      <div class="topic-body">
+        <ul>
+          <li>印刷サマリーの家事按分欄が空欄になるバグを修正（<code>{カテゴリID: 割合}</code> を読むように）。</li>
+          <li>源泉徴収税額の年間合計を申告サマリーと印刷に表示。</li>
+          <li>CSVに出力年の選択、末尾に「仕訳区分・家事按分率・経費算入額・源泉徴収税額」を追加（元の12列は維持）。</li>
+          <li>売掛の入金時に売上時の借方を上書きしない。CSVで「売上」「入金」を別行に。旧データも復元して出力。</li>
+          <li>減価償却を取得年の月割り・耐用年数経過後の停止（備忘価額1円）に対応。</li>
+        </ul>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">偽Firebaseでの画面試験</div>
+      <div class="topic-body">
+        <ul>
+          <li><code>rakuthrough/tests/mock-trial-20261108/</code> に偽Firebase・架空データ・結果を保存。本番データには触れていない。</li>
+          <li>集計（売上292,000・利益130,600）、源泉合計13,273、CSV（2026年17行）、印刷、無料プランの月5件制限がすべて期待どおり。</li>
+        </ul>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">料金改定（未commit・未デプロイ）</div>
+      <div class="topic-body">
+        <ul>
+          <li>申告準備サマリー・印刷・CSVは、年額・買い切りはすぐ、月額は通算7回目の支払いから。</li>
+          <li>Functions：契約種別（月額/年額）と月額の支払い回数を保存。同じ請求書は1回だけ数える。0円の請求書は数えない。</li>
+          <li>改定前からの月額契約者は、次の支払い時に自動で「据え置き」印を付けて申告機能を残す。</li>
+          <li>「収支出力のみ ¥1,500」は新規販売を終了（購入済みは期限まで有効）。</li>
+          <li>月額契約中の人にはCheckoutを出さず、年額への切り替えはお問い合わせへ案内（二重契約を防ぐため）。</li>
+          <li>LPの料金表記を「年額はすぐ、月額は7か月目から」に。</li>
+          <li>テスト：会計テストに利用条件10項目、Webhookテスト（<code>tests/verify-webhook-paid-months.cjs</code>）を追加。どちらもPASS。</li>
+          <li>バックアップ：<code>backup/20261108_pricing_7months_before/</code></li>
+        </ul>
+        <div class="decided">
+          ¥550で1か月だけ入って申告まで済ませる抜け道を塞ぐ。7回目の支払い時点の合計は¥3,850で、年額¥3,980とほぼ同じで超えない。長く続けた月額ユーザーに追加の支払いをさせない。
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">⚠ 検討してやめたこと</div>
+      <div class="topic-body">
+        <ul>
+          <li>⚠ 月額＋申告パック（¥1,980）：月額で払い続けた人がさらにパック代を払うのはおかしい。パック単体の利用者も少なく、設計が一番複雑になる。</li>
+          <li>⚠ 月額は記録専用・申告は年額のみ：長く続けた月額ユーザーほど損をする。</li>
+          <li>⚠ 6回目から開放：合計¥3,300で年額より¥680安く、抜け道の余地が大きい。</li>
+          <li>⚠ 65万円控除への本格対応（正式なB/S）：1〜2週間以上かかり、会計ソフトと競合する領域。今季は見送り。</li>
+        </ul>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">残タスク・要相談</div>
+      <div class="topic-body">
+        <ul>
+          <li>料金改定のcommit・push。本番反映は Functions → アプリ の順（逆だと新規月額の人が据え置き扱いになる）。Stripeテストモードでの確認は未実施。</li>
+          <li>Netlify本番アプリは申告前修正も未反映（GitHub Pages旧URLは反映済み）。</li>
+          <li>Netlify本番LPが古い：無料プランが「件数無制限・CSV出力」と表示されていてアプリと食い違っている。</li>
+          <li>アプリにカスタマーポータル（解約・プラン変更）の入口がない。</li>
+          <li>未修正の小さな点：入金日の初期値がUTC日付、CSVで取消・返金にも仕訳が出る、按分率が年度別でない、無料枠が入力月で数える。</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="note-hint">💡 次：料金改定のcommit判断 → Functionsデプロイ → アプリのNetlifyデプロイ。11月下旬に自分のデータで試運転。</p>
+  </div>
+
   <!-- 2026-09-09 -->
   <div class="entry">
     <div class="date">2026年9月9日</div>
