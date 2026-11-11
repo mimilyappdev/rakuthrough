@@ -132,6 +132,42 @@
     </div>
   </div>
 
+  <!-- 2026-11-12 -->
+  <div class="entry">
+    <div class="date">2026年11月12日</div>
+    <div class="entry-title">料金改定（月額は7か月目から申告機能）をStripeテストモードで確認して本番反映</div>
+
+    <div class="topic">
+      <div class="topic-label">やったこと</div>
+      <div class="topic-body">
+        <ul>
+          <li><b>テストモード確認</b>：テスト専用関数 <code>stripeWebhookTest</code>（<code>users/{uid}/billing/rakuthrough_test</code> に書く・本番の課金情報に触れない）を一時デプロイ。Test Clockで早送りし、月額は paidMonths が 1→7 と1回ずつ増える、年額は billingInterval=yearly で回数を数えない、新規は据え置き扱いにならない、を確認。記録 <code>rakuthrough/tests/stripe-test-20261112/結果.md</code>。</li>
+          <li><b>Node.js 20 が 2026-10-30 に提供終了</b>していてデプロイ不可 → <code>functions/package.json</code> を 22 に（commit <code>7a7afdb</code>）。</li>
+          <li><b>本番反映（Functions → Netlify → push の順）</b>：本番Functions 3つ（createCheckoutSession・createCustomerPortalSession・stripeWebhook）を Node.js 22 で更新。Netlify は LP（deploy <code>6af4add1fc06c94b823c4697</code>）とアプリ（<code>6af4adde4465c8a35c50e1c6</code>、移行案内2行を外した bfb8453）。GitHub に push（f9bc098→7a7afdb）。</li>
+          <li>本番で確認：LPに「年額はすぐ、月額は7か月目から」、アプリに7回目判定・税務相談の案内あり、移行案内なし。Webhookは署名なしの呼び出しを400で断る（起動OK）。</li>
+          <li><b>後片付け</b>：テスト関数・テスト用secret・Firestoreのテストデータ・Stripeのテスト Webhook／Test Clock を削除、テスト商品はアーカイブ、手元の鍵ファイル削除。コードからテスト専用の口を外した。</li>
+          <li>デプロイ元：<code>rakuthrough/deploy-20261112/</code></li>
+        </ul>
+        <div class="decided">
+          戻すとき：Netlify の Deploys で LP <code>6af090a5f179e725a10175de</code>／アプリ <code>6af0a7296d697cb4ea23b3a7</code> を「Publish deploy」。Functions は <code>git checkout 13186ab -- functions</code> 相当の版を engines 22 にして再デプロイ。
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="topic">
+      <div class="topic-label">つまずいたこと・却下</div>
+      <div class="topic-body">
+        <ul>
+          <li>鍵をスクリプトの入力欄でなく普通のPowerShellに貼ってしまい、コマンドとして実行されて鍵の一部が表示された → テスト鍵はローテーション推奨。</li>
+          <li>Webhook秘密の登録に失敗 → 秘密は作成時しか取り出せないので、テスト用Webhookを作り直して登録。</li>
+          <li>却下：本番のStripeで実際に課金して確かめる（返金の手間・売上記録が汚れる）。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <!-- 2026-11-09 -->
   <div class="entry">
     <div class="date">2026年11月9日</div>

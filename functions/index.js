@@ -16,13 +16,7 @@ const PRICE_PLAN_MAP = {
   'price_1TeFKpRXW1evPVMU5QSgaMur': { plan: 'export',   billing: 'once', discontinued: true },
 };
 
-// テスト専用（Stripeテストモード）の価格。料金改定の確認が終わったら stripeWebhookTest ごと削除する
-const TEST_PRICE_PLAN_MAP = {
-  'price_1UadV5RXW1evPVMUzWOPxJrf': { plan: 'pro', billing: 'monthly' },
-  'price_1UadV5RXW1evPVMUinJtMTog': { plan: 'pro', billing: 'yearly'  },
-};
-
-// appKey: 本番は 'rakuthrough'、テスト専用は 'rakuthrough_test'（課金情報・イベント記録を本番と分ける）
+// appKey: 課金情報・イベント記録の置き場所（テストモードで確かめるときは別のキーにして本番と分ける）
 function getBillingRef(db, uid, appKey = 'rakuthrough') {
   return db.collection('users').doc(uid).collection('billing').doc(appKey);
 }
@@ -151,19 +145,6 @@ exports.stripeWebhook = onRequest(
   })
 );
 
-// テスト専用：Stripeテストモードのイベントを受け、users/{uid}/billing/rakuthrough_test に書く（本番の課金情報には触れない）
-const stripeTestSecretKey = defineSecret('STRIPE_TEST_SECRET_KEY');
-const stripeTestWebhookSecret = defineSecret('STRIPE_TEST_WEBHOOK_SECRET');
-exports.stripeWebhookTest = onRequest(
-  { secrets: [stripeTestSecretKey, stripeTestWebhookSecret] },
-  (req, res) => handleStripeWebhook(req, res, {
-    secretKey: stripeTestSecretKey.value(),
-    webhookSecret: stripeTestWebhookSecret.value(),
-    priceMap: TEST_PRICE_PLAN_MAP,
-    appKey: 'rakuthrough_test',
-  })
-);
-
 async function handleStripeWebhook(req, res, { secretKey, webhookSecret, priceMap, appKey }) {
     const stripe = require('stripe')(secretKey);
     const PRICE_PLAN_MAP = priceMap;
@@ -276,7 +257,6 @@ async function handleStripeWebhook(req, res, { secretKey, webhookSecret, priceMa
         }
       }
       await billingRef.set(update, { merge: true });
-      if (appKey !== 'rakuthrough') console.log('[test] billing updated', uid, JSON.stringify((await billingRef.get()).data()));
     }
 
     if (event.type === 'customer.subscription.deleted') {
