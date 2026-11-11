@@ -16,8 +16,15 @@ const PRICE_PLAN_MAP = {
   'price_1TeFKpRXW1evPVMU5QSgaMur': { plan: 'export',   billing: 'once', discontinued: true },
 };
 
-function getBillingRef(db, uid) {
-  return db.collection('users').doc(uid).collection('billing').doc('rakuthrough');
+// テスト専用（Stripeテストモード）の価格。料金改定の確認が終わったら stripeWebhookTest ごと削除する
+const TEST_PRICE_PLAN_MAP = {
+  'price_1UadV5RXW1evPVMUzWOPxJrf': { plan: 'pro', billing: 'monthly' },
+  'price_1UadV5RXW1evPVMUinJtMTog': { plan: 'pro', billing: 'yearly'  },
+};
+
+// appKey: 本番は 'rakuthrough'、テスト専用は 'rakuthrough_test'（課金情報・イベント記録を本番と分ける）
+function getBillingRef(db, uid, appKey = 'rakuthrough') {
+  return db.collection('users').doc(uid).collection('billing').doc(appKey);
 }
 
 function getSubscriptionId(invoice) {
@@ -26,13 +33,13 @@ function getSubscriptionId(invoice) {
   return typeof value === 'string' ? value : value.id;
 }
 
-function getSubscriptionExpiry(subscription) {
+function getSubscriptionExpiry(subscription, priceMap = PRICE_PLAN_MAP) {
   const periodEnd = subscription.items?.data[0]?.current_period_end
     ?? subscription.current_period_end;
   if (periodEnd) return new Date(periodEnd * 1000).toISOString();
 
   const priceId = subscription.items?.data[0]?.price?.id;
-  const planInfo = PRICE_PLAN_MAP[priceId];
+  const planInfo = priceMap[priceId];
   const expiry = new Date();
   if (planInfo?.billing === 'monthly') expiry.setMonth(expiry.getMonth() + 1);
   if (planInfo?.billing === 'yearly') expiry.setFullYear(expiry.getFullYear() + 1);
@@ -136,22 +143,44 @@ exports.createCustomerPortalSession = onCall(
 
 exports.stripeWebhook = onRequest(
   { secrets: [stripeSecretKey, stripeWebhookSecret] },
-  async (req, res) => {
-    const stripe = require('stripe')(stripeSecretKey.value());
+  (req, res) => handleStripeWebhook(req, res, {
+    secretKey: stripeSecretKey.value(),
+    webhookSecret: stripeWebhookSecret.value(),
+    priceMap: PRICE_PLAN_MAP,
+    appKey: 'rakuthrough',
+  })
+);
+
+// テスト専用：Stripeテストモードのイベントを受け、users/{uid}/billing/rakuthrough_test に書く（本番の課金情報には触れない）
+const stripeTestSecretKey = defineSecret('STRIPE_TEST_SECRET_KEY');
+const stripeTestWebhookSecret = defineSecret('STRIPE_TEST_WEBHOOK_SECRET');
+exports.stripeWebhookTest = onRequest(
+  { secrets: [stripeTestSecretKey, stripeTestWebhookSecret] },
+  (req, res) => handleStripeWebhook(req, res, {
+    secretKey: stripeTestSecretKey.value(),
+    webhookSecret: stripeTestWebhookSecret.value(),
+    priceMap: TEST_PRICE_PLAN_MAP,
+    appKey: 'rakuthrough_test',
+  })
+);
+
+async function handleStripeWebhook(req, res, { secretKey, webhookSecret, priceMap, appKey }) {
+    const stripe = require('stripe')(secretKey);
+    const PRICE_PLAN_MAP = priceMap;
 
     let event;
     try {
       event = stripe.webhooks.constructEvent(
         req.rawBody,
         req.headers['stripe-signature'],
-        stripeWebhookSecret.value()
+        webhookSecret
       );
     } catch (err) {
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
     const db = getFirestore();
-    const eventRef = db.doc(`stripeApps/rakuthrough/events/${event.id}`);
+    const eventRef = db.doc(`stripeApps/${appKey}/events/${event.id}`);
     const eventDoc = await eventRef.get();
     if (eventDoc.data()?.status === 'processed') return res.status(200).send('OK');
 
@@ -188,9 +217,9 @@ exports.stripeWebhook = onRequest(
           update.planExpiry = new Date(new Date().getFullYear(), 11, 31).toISOString();
         }
       }
-      await getBillingRef(db, uid).set(update, { merge: true });
+      await getBillingRef(db, uid, appKey).set(update, { merge: true });
       if (customerId) {
-        await db.doc(`stripeApps/rakuthrough/customers/${customerId}`).set({
+        await db.doc(`stripeApps/${appKey}/customers/${customerId}`).set({
           uid,
           updatedAt: FieldValue.serverTimestamp(),
         }, { merge: true });
@@ -222,14 +251,14 @@ exports.stripeWebhook = onRequest(
       const customerId = typeof subscription.customer === 'string'
         ? subscription.customer
         : subscription.customer?.id;
-      const billingRef = getBillingRef(db, uid);
+      const billingRef = getBillingRef(db, uid, appKey);
       const current = (await billingRef.get()).data() || {};
       const update = {
         plan: 'pro',
         billingInterval: planInfo.billing,
         stripeCustomerId: customerId,
         subscriptionStatus: 'active',
-        planExpiry: getSubscriptionExpiry(subscription),
+        planExpiry: getSubscriptionExpiry(subscription, PRICE_PLAN_MAP),
         updatedAt: FieldValue.serverTimestamp(),
       };
       // 料金改定前からの契約者（契約種別が未保存のpro）は、申告機能をそのまま使えるようにする
@@ -237,7 +266,7 @@ exports.stripeWebhook = onRequest(
       // 月額の支払い回数を通算で数える（7回目から申告機能）。同じ請求書は1回だけ数える
       if (planInfo.billing === 'monthly' && (invoice.amount_paid || 0) > 0) {
         try {
-          await db.doc(`stripeApps/rakuthrough/paidInvoices/${invoice.id}`).create({
+          await db.doc(`stripeApps/${appKey}/paidInvoices/${invoice.id}`).create({
             uid,
             countedAt: FieldValue.serverTimestamp(),
           });
@@ -247,6 +276,7 @@ exports.stripeWebhook = onRequest(
         }
       }
       await billingRef.set(update, { merge: true });
+      if (appKey !== 'rakuthrough') console.log('[test] billing updated', uid, JSON.stringify((await billingRef.get()).data()));
     }
 
     if (event.type === 'customer.subscription.deleted') {
@@ -260,7 +290,7 @@ exports.stripeWebhook = onRequest(
 
       const uid = await getUidFromSubscription(stripe, subscription);
       if (uid) {
-        await getBillingRef(db, uid).set({
+        await getBillingRef(db, uid, appKey).set({
           plan: 'free',
           stripeCustomerId: FieldValue.delete(),
           subscriptionStatus: 'canceled',
@@ -272,5 +302,4 @@ exports.stripeWebhook = onRequest(
 
     await markProcessed();
     return res.status(200).send('OK');
-  }
-);
+}

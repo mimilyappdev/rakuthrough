@@ -107,5 +107,16 @@ const billing = (uid) => store[`users/${uid}/billing/rakuthrough`];
     'discontinued export-only price must be rejected',
   );
 
+  // テスト専用の口は本番の価格を受け付けず、本番の課金情報にも書かない
+  const before = JSON.stringify(store);
+  subscriptions.subT = { id: 'subT', customer: 'cus_1', metadata: { app: 'rakuthrough', firebaseUid: 'u9' },
+    items: { data: [{ price: { id: MONTHLY }, current_period_end: 1800000000 }] } };
+  await fns.stripeWebhookTest({ rawBody: { id: 'evt_test_1', type: 'invoice.payment_succeeded',
+    data: { object: { id: 'in_t1', subscription: 'subT', amount_paid: 550 } } }, headers: {} },
+  { status: () => ({ send: () => {} }) });
+  assert.equal(store['users/u9/billing/rakuthrough'], undefined, 'test endpoint must not write production billing');
+  assert.equal(store['users/u9/billing/rakuthrough_test'], undefined, 'test endpoint ignores live prices');
+  assert.ok(JSON.stringify(store).length >= before.length);
+
   console.log('PASS: RakuThrough webhook paid-months checks');
 })().catch((e) => { console.error(e); process.exit(1); });
