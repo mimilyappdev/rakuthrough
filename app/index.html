@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="4;url=https://rakuthrough-app.netlify.app/">
+  <title>RakuThroughアプリの新しいURLへ移動します</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f5f4f0; color: #1a1a18; }
+    main { max-width: 34rem; padding: 2rem; text-align: center; }
+    a { color: #1a56db; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>RakuThroughアプリの新しいURLへ移動します</h1>
+    <p>数秒後に新しいアプリへ移動します。</p>
+    <p><a href="https://rakuthrough-app.netlify.app/">すぐに移動する</a></p>
+  </main>
+  <script>
+    window.setTimeout(() => {
+      window.location.replace('https://rakuthrough-app.netlify.app/' + window.location.search + window.location.hash);
+    }, 4000);
+  </script>
+</body>
+</html>
